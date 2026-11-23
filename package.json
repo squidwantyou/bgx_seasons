@@ -1,0 +1,12 @@
+{
+  "name": "bgx",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev": "pnpm --parallel --filter @bgx/protocol --filter @bgx/server --filter @bgx/web run dev",
+    "test": "pnpm --filter @bgx/server run test",
+    "deploy": "bash scripts/deploy.sh",
+    "smoke": "node apps/web/scripts/e2e-smoke.mjs"
+  }
+}

@@ -1,0 +1,30 @@
+[Unit]
+Description=BGX online board game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bgx
+Group=bgx
+WorkingDirectory=/opt/bgx/app
+Environment=NODE_ENV=production
+Environment=PORT=8787
+Environment=HOST=127.0.0.1
+Environment=DB_PATH=/var/lib/bgx/bgx.db
+Environment=PUBLIC_BASE_PATH=/bgx
+Environment=COOKIE_SECURE=1
+Environment=LOG_LEVEL=info
+ExecStart=/usr/local/bin/node apps/server/dist/index.js
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/bgx
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
