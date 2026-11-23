@@ -1,0 +1,355 @@
+/* 四季物语牌桌局部样式，全部 ss- 前缀，避免污染其他页面。 */
+.ss-board {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ss-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ss-phase {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  background: #3b4b63;
+  color: #fff;
+}
+
+.ss-phase-draft { background: #5b6bb5; }
+.ss-phase-organize { background: #8a6d3b; }
+.ss-phase-play { background: #2f7d5d; }
+.ss-phase-ended { background: #6b6b6b; }
+
+.ss-meta { font-weight: 600; }
+.ss-counts { margin-left: auto; opacity: 0.75; font-size: 13px; }
+
+.ss-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.ss-die {
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  opacity: 0.95;
+}
+
+.ss-die img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  display: block;
+}
+
+.ss-die-picked { opacity: 0.45; }
+.ss-die figcaption { margin-top: 2px; }
+.ss-die-missing { width: 56px; height: 56px; display: grid; place-items: center; background: #444; border-radius: 10px; }
+
+.ss-player {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ss-player-you { border-color: rgba(120, 200, 160, 0.55); }
+
+.ss-player-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 13px;
+}
+
+.ss-seat-tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.ss-stat { opacity: 0.9; }
+
+.ss-energies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ss-energy {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.ss-energy img { width: 20px; height: 20px; border-radius: 50%; }
+.ss-energy-total { font-size: 12px; opacity: 0.6; }
+
+.ss-played {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  min-height: 34px;
+  align-items: center;
+}
+
+.ss-card {
+  margin: 0;
+  width: 84px;
+  position: relative;
+}
+
+.ss-card img {
+  width: 100%;
+  border-radius: 6px;
+  display: block;
+  aspect-ratio: 455 / 634;
+  object-fit: cover;
+  background: #222;
+}
+
+.ss-card-compact { width: 52px; }
+.ss-card-missing {
+  aspect-ratio: 455 / 634;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  text-align: center;
+  border-radius: 6px;
+  background: #333;
+  padding: 4px;
+}
+
+.ss-card figcaption {
+  display: flex;
+  flex-direction: column;
+  font-size: 10px;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.ss-card-cost { opacity: 0.6; }
+
+.ss-card-used {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.ss-hand {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.ss-hand h3, .ss-log h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.ss-hand-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ss-log ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.ss-log-effect, .ss-log-choice { opacity: 0.8; }
+.ss-log-score { font-weight: 600; }
+.ss-muted { opacity: 0.55; font-size: 13px; }
+
+.ss-card-clickable { cursor: pointer; }
+.ss-card-clickable:hover img, .ss-card-clickable:focus-visible img { outline: 2px solid #7fc8a9; outline-offset: 1px; }
+.ss-card-selected img { outline: 2px solid #ffcf5c; outline-offset: 1px; }
+.ss-die-clickable { cursor: pointer; }
+.ss-die-clickable:hover img { outline: 2px solid #7fc8a9; outline-offset: 1px; border-radius: 10px; }
+.ss-die-reward { display: block; font-size: 10px; opacity: 0.7; }
+
+.ss-actions {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.ss-actions-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ss-transmute { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.ss-button {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ss-button:disabled { opacity: 0.4; cursor: not-allowed; }
+.ss-button-primary { background: #2f7d5d; border-color: #3f9d76; }
+.ss-button-ghost { background: transparent; }
+.ss-button:not(:disabled):hover { filter: brightness(1.2); }
+
+.ss-result {
+  border: 1px solid rgba(255, 207, 92, 0.5);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.ss-result h3 { margin: 0 0 6px; font-size: 14px; }
+.ss-result ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.8; }
+.ss-winner { font-weight: 700; }
+
+.ss-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 16px;
+}
+
+.ss-modal {
+  width: min(560px, 92vw);
+  max-height: 84vh;
+  overflow-y: auto;
+  border-radius: 14px;
+  padding: 16px;
+  background: #1f2630;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+.ss-modal h3 { margin: 0 0 10px; font-size: 16px; }
+
+.ss-alloc { display: grid; gap: 8px; margin-bottom: 10px; }
+.ss-alloc-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.ss-alloc-row span:first-child { width: 2em; }
+
+.ss-choice-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+
+.ss-choice-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ss-choice-card {
+  width: 88px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ss-choice-card img { width: 100%; border-radius: 6px; display: block; }
+.ss-choice-card-selected { border-color: #ffcf5c; }
+.ss-choice-card-name { display: block; font-size: 11px; line-height: 1.3; margin-top: 2px; }
+
+.ss-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ss-badges-count { font-size: 13px; color: #f5d98b; }
+.ss-badges-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ss-badge-keep-row { display: flex; gap: 14px; justify-content: center; }
+.ss-badge-keep-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  cursor: pointer;
+  width: 150px;
+}
+.ss-badge-keep-card:hover { border-color: #f5d98b; }
+.ss-badge-keep-card img { width: 100%; border-radius: 8px; display: block; }
+.ss-badge-keep-card span { font-size: 12px; text-align: center; }
+
+.ss-wait {
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 196, 87, 0.16);
+  color: #ffd98a;
+  font-size: 0.9rem;
+}
+
+.ss-queue-hint {
+  margin: 0.25rem 0 0;
+  color: var(--ss-muted, #9aa4b2);
+  font-size: 0.82rem;
+}
+
+.ss-choice-step {
+  margin: -0.3rem 0 0.6rem;
+  color: #ffd98a;
+  font-size: 0.85rem;
+}
+
+/* 窄屏（手机/半屏窗口）：缩小卡面与间距，保证手牌一行能多看几张。 */
+@media (max-width: 720px) {
+  .ss-board { gap: 8px; margin-top: 8px; }
+  .ss-topbar { gap: 6px; padding: 6px 8px; font-size: 13px; }
+  .ss-counts { width: 100%; margin-left: 0; }
+  .ss-dice { gap: 6px; padding: 8px; }
+  .ss-die img { width: 44px; height: 44px; }
+  .ss-die-missing { width: 44px; height: 44px; }
+  .ss-card { width: 64px; }
+  .ss-card-compact { width: 44px; }
+  .ss-hand { padding: 6px 8px; }
+  .ss-hand-cards { gap: 6px; }
+  .ss-card figcaption { font-size: 9px; }
+  .ss-log ol { max-height: 110px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-card-clickable:hover img,
+  .ss-die-clickable:hover img { outline-width: 2px; transition: none; }
+}
