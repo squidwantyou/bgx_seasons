@@ -156,9 +156,9 @@ pnpm deploy
 4. 创建系统用户 `bgx`、数据目录 `/var/lib/bgx`（SQLite：`/var/lib/bgx/bgx.db`）
 5. 安装并重启 `bgx.service`（监听 `127.0.0.1:8787`）
 6. 安装 `/etc/apache2/conf-available/bgx.conf`，启用 `proxy_http`、`proxy_wstunnel`，`configtest` 后 reload Apache
-7. 健康检查 `http://127.0.0.1:8787/healthz` 与 `https://thinktwice.top/bgx/api/me`
+7. 健康检查 `http://127.0.0.1:8787/healthz` 
 
-Apache 只做了路径级挂载，**没有改动 piwigo 的站点配置**：`/bgx` 走静态目录 + SPA 回退，`/bgx/api`、`/bgx/socket.io` 反代到本机 8787。
+Apache 只做了路径级挂载：`/bgx` 走静态目录 + SPA 回退，`/bgx/api`、`/bgx/socket.io` 反代到本机 8787。
 
 常用运维命令：
 
