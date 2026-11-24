@@ -16,7 +16,7 @@ Environment=PUBLIC_BASE_PATH=/bgx
 Environment=COOKIE_SECURE=1
 Environment=LOG_LEVEL=info
 ExecStart=/usr/local/bin/node apps/server/dist/index.js
-Restart=on-failure
+Restart=always
 RestartSec=2
 TimeoutStopSec=10
 NoNewPrivileges=true
