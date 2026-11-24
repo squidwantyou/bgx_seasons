@@ -147,9 +147,17 @@ function candidates(state) {
   const caps = p.options.maxPerElement ?? {};
   if (p.key === 'cost_reduce') {
     // 枚举所有可行的减费分配，只保留减完真的付得起的那些。
+    // 注意：储备 = energies + 非封印卡上的 stored（与引擎一致）。
     const cost = p.options.cost ?? {};
+    const reserve = { ...me.energies };
+    for (const card of me.played) {
+      if (!card.stored) continue;
+      const def = CARD_BY_ID.get(card.i);
+      if ((def?.effect?.abilities ?? []).some((ability) => ability.kind === 'sealed_energy')) continue;
+      for (const element of ELEMENTS) reserve[element] += card.stored[element] ?? 0;
+    }
     const payable = (reduced) =>
-      ELEMENTS.every((element) => (reduced[element] ?? 0) <= (me.energies[element] ?? 0)) &&
+      ELEMENTS.every((element) => (reduced[element] ?? 0) <= (reserve[element] ?? 0)) &&
       (cost.crystal ?? 0) <= me.crystals;
     const out = [];
     const walk = (index, left, alloc) => {
