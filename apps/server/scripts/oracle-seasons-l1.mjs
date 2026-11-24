@@ -202,7 +202,18 @@ function createPaired(playerCount = 2) {
       draftHand: oldState.players[seat].draftHand.map((card) => ({ i: card.id, u: card.uid })),
     })),
   };
-  return { oldState, newState };
+  // 4g 段逐卡激活需要的卡可能在前面的段落里被抽走/弃掉；开局先预留一份，
+  // 两边同时从牌堆移除，保证牌堆一致且 4g 永远拿得到卡。
+  const RESERVED_IDS = [23, 16, 5, 25, 44, 32, 32, 26];
+  const reserve = [];
+  for (const id of RESERVED_IDS) {
+    const oldCard = oldState.deck.find((card) => card.id === id);
+    if (!oldCard) continue;
+    oldState.deck = oldState.deck.filter((card) => card !== oldCard);
+    newState = { ...newState, deck: newState.deck.filter((card) => card.u !== oldCard.uid) };
+    reserve.push({ id, oldCard, newRef: { i: oldCard.id, u: oldCard.uid } });
+  }
+  return { oldState, newState, reserve };
 }
 
 function pickFor(state, seat) {
@@ -212,7 +223,7 @@ function pickFor(state, seat) {
 // ---------------- 1. 轮抽 + 组牌 ----------------
 const allSummonedIds = [];
 for (const playerCount of [2, 3]) {
-  const { oldState, newState } = createPaired(playerCount);
+  const { oldState, newState, reserve } = createPaired(playerCount);
   let current = newState;
   compare(`setup ${playerCount} 人`, oldState, current);
 
@@ -613,18 +624,37 @@ for (const playerCount of [2, 3]) {
       const locate = (side, refOf) => {
         const inDeck = side.deck.find((card) => card.i === cardId || card.id === cardId);
         if (inDeck) return inDeck;
-        for (const zone of side.players.flatMap((player) => [player.hand, player.library2, player.library3, player.played])) {
+        for (const zone of [
+          side.discard ?? [],
+          side.pendingCards ?? [],
+          ...side.players.flatMap((player) => [
+            player.hand,
+            player.library2,
+            player.library3,
+            player.played,
+            player.discard ?? [],
+            player.badgeDraw ?? [],
+          ]),
+        ]) {
           const found = zone.find((card) => card.i === cardId || card.id === cardId);
           if (found) return found;
         }
         return undefined;
       };
-      const picked = locate(current, newRef);
+      let picked = locate(current, newRef);
+      let oldCard = picked ? locate(oldState, oldRef, picked.u) : undefined;
+      let fromReserve = false;
       if (!picked) {
-        fail(`${label}：任何区域都找不到卡 id=${cardId}`);
-        return;
+        const index = reserve.findIndex((entry) => entry.id === cardId);
+        if (index < 0) {
+          fail(`${label}：任何区域都找不到卡 id=${cardId}（预留副本已耗尽）`);
+          return;
+        }
+        const entry = reserve.splice(index, 1)[0];
+        picked = entry.newRef;
+        oldCard = entry.oldCard;
+        fromReserve = true;
       }
-      const oldCard = locate(oldState, oldRef, picked.u);
       if (!oldCard) {
         fail(`${label}：旧引擎任何区域都找不到 uid=${picked.u}`);
         return;
@@ -643,8 +673,10 @@ for (const playerCount of [2, 3]) {
         if (side.pendingCards) side.pendingCards = side.pendingCards.filter((card) => (card.uid ?? card.u) !== uid);
         return side;
       };
-      strip(oldState, picked.u);
-      current = strip(current, picked.u);
+      if (!fromReserve) {
+        strip(oldState, picked.u);
+        current = strip(current, picked.u);
+      }
 
       for (const side of [oldState, current]) {
         side.turnOwner = 0;
