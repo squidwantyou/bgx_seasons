@@ -9,8 +9,8 @@ import type { GameCatalog } from '../index.js';
  * 四季物语（Seasons）。
  *
  * 支持 2–4 人局；2 人局可以认输，3–4 人局不能认输（见 §6）。
- * 基础 50 张必选；ext1（魔法王国）/ ext2（命运之路）为可选扩展，
- * 卡表见 seasons-cards-ext.ts，效果实现进度见迁移文档 T4.2b。
+ * 卡表为 50 张基础牌（seasons-cards.ts）；也支持用 customDeck
+ * 指定任意卡池，方便组牌玩法与卡池压力测试。
  */
 export const seasonsCatalog: GameCatalog = {
   id: 'seasons',
@@ -30,39 +30,23 @@ export const seasonsCatalog: GameCatalog = {
   ],
   options: [
     {
-      id: 'extensions',
-      label: '扩展包',
-      type: 'multi',
-      description: '基础 50 张必选；扩展包各追加 20 张（每种 2 张）。',
-      default: ['base'],
-      choices: [
-        {
-          value: 'base',
-          label: '基础 50 张',
-          description: '必选。关闭后无法开局。',
-        },
-        {
-          value: 'ext1',
-          label: '魔法王国（+20 张）',
-          description: '高费用、高分的皇家主题卡。',
-        },
-        {
-          value: 'ext2',
-          label: '命运之路（+20 张）',
-          description: '命运主题卡，强调骰子与回合条件。',
-        },
-      ],
+      id: 'customDeck',
+      label: '自定义卡池',
+      type: 'select',
+      description:
+        '可选。留空使用标准 50 张基础卡；填写逗号分隔的卡牌 id 可指定卡池（每种 2 张）。',
+      default: '',
+      choices: [{ value: '', label: '标准卡池（50 张）' }],
     },
   ],
 };
 
-/** 扩展包选项：base 必选，ext1/ext2 可叠加。 */
+/** 对局选项：可选 customDeck（逗号分隔的卡牌 id）。 */
 export const seasonsOptionsSchema = z
   .object({
-    extensions: z.array(z.enum(['base', 'ext1', 'ext2'])).min(1),
     /**
      * 自定义卡池：逗号分隔的卡牌 id（每种仍按 2 张入池）。
-     * 给测试 / 未来组牌玩法用；设置后忽略 extensions 推导出的卡表。
+     * 给测试 / 未来组牌玩法用；留空时使用标准 50 张基础卡。
      */
     customDeck: z
       .string()
@@ -73,7 +57,7 @@ export const seasonsOptionsSchema = z
 
 export type SeasonsOptions = z.infer<typeof seasonsOptionsSchema>;
 
-export const seasonsDefaultOptions: SeasonsOptions = { extensions: ['base'] };
+export const seasonsDefaultOptions: SeasonsOptions = {};
 
 /* ------------------------------------------------------------------ */
 /* 基础类型                                                            */
@@ -166,8 +150,6 @@ export interface SeasonsCardDef {
   effect?: SeasonsCardEffect | null;
   desc: string;
   descEn?: string;
-  /** 所属卡包；基础卡缺省视为 base。 */
-  extension?: 'base' | 'ext1' | 'ext2';
 }
 
 /* ------------------------------------------------------------------ */

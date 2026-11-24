@@ -66,392 +66,6 @@ function draftAll(state: SeasonsState): SeasonsState {
   return next;
 }
 
-describe('seasons 扩展包', () => {
-  const withExtensions = (...extensions: Array<'base' | 'ext1' | 'ext2'>) =>
-    seasons.setup(2, { extensions }, createRng('ext-seed'));
-
-  it('ext1 追加 40 张牌（20 种 × 2 张），uid 连续且唯一', () => {
-    const state = withExtensions('base', 'ext1');
-    const all = [
-      ...state.players.flatMap((player) => player.draftHand),
-      ...state.deck,
-    ];
-    expect(all).toHaveLength(140);
-    expect(new Set(all.map((card) => card.u)).size).toBe(140);
-    expect(Math.max(...all.map((card) => card.u))).toBe(140);
-    expect(all.some((card) => EXT1_CARDS.some((def) => def.id === card.i))).toBe(true);
-    expect(all.some((card) => EXT2_CARDS.some((def) => def.id === card.i))).toBe(false);
-  });
-
-  it('ext1 + ext2 共 180 张牌（每人 9 张后剩 162）', () => {
-    const state = withExtensions('base', 'ext1', 'ext2');
-    expect(state.deck).toHaveLength(162);
-    expect(state.players[0]?.draftHand).toHaveLength(9);
-  });
-
-  it('缺少 base 时拒绝开局', () => {
-    expect(() => withExtensions('ext1')).toThrow('基础卡包（base）是必选项');
-  });
-
-  type PlayedRef = { i: number; u: number };
-
-  function withPlayed(state: SeasonsState, seat: number, cards: PlayedRef[]): SeasonsState {
-    return {
-      ...state,
-      players: state.players.map((player) =>
-        player.seat === seat ? { ...player, played: [...player.played, ...cards] } : player,
-      ),
-    };
-  }
-
-  function summonExt(
-    state: SeasonsState,
-    seat: number,
-    def: { id: number },
-    energies = 5,
-  ): SeasonsState {
-    const prepared: SeasonsState = {
-      ...state,
-      turnOwner: seat,
-      players: state.players.map((item) =>
-        item.seat === seat
-          ? {
-              ...item,
-              hand: [...item.hand, { i: def.id, u: 9999 }],
-              gauge: item.played.length + 1,
-              energies: { water: energies, air: energies, fire: energies, earth: energies },
-              crystals: 10,
-            }
-          : item,
-      ),
-    };
-    return apply(prepared, seat, { type: 'summon', cardUid: 9999 });
-  }
-
-  it('魔法骑士：场上有魔法物品时水晶 +10', () => {
-    const magic = BASE_CARDS.find((def) => def.type === 'magic_item')!;
-    const knight = EXT1_CARDS.find((def) => def.id === 68)!;
-    const base = withPlayed(toPlay(draftAll(setup())), 0, [{ i: magic.id, u: 8000 }]);
-    const after = summonExt(base, 0, knight);
-    expect(after.players[0]?.crystals).toBe(20);
-    expect(after.log.at(-1)?.msg).toContain('魔法骑士');
-  });
-
-  it('魔法巨龙：每位对手水晶 -5，且不低于 0', () => {
-    const dragon = EXT1_CARDS.find((def) => def.id === 69)!;
-    const base = toPlay(draftAll(setup()));
-    const prepared: SeasonsState = {
-      ...base,
-      players: base.players.map((player) =>
-        player.seat === 1 ? { ...player, crystals: 3 } : player,
-      ),
-    };
-    const after = summonExt(prepared, 0, dragon);
-    expect(after.players[1]?.crystals).toBe(0);
-  });
-
-  it('命运冠军：水晶领先时每位对手 -4，落后时不触发', () => {
-    const champion = EXT2_CARDS.find((def) => def.id === 86)!;
-    const base = toPlay(draftAll(setup()));
-    const leading: SeasonsState = {
-      ...base,
-      players: base.players.map((player) =>
-        player.seat === 1 ? { ...player, crystals: 2 } : player,
-      ),
-    };
-    const ok = summonExt(leading, 0, champion);
-    expect(ok.players[1]?.crystals).toBe(0);
-
-    const behind: SeasonsState = {
-      ...base,
-      players: base.players.map((player) =>
-        player.seat === 1 ? { ...player, crystals: 99 } : player,
-      ),
-    };
-    const skipped = summonExt(behind, 0, champion);
-    expect(skipped.players[1]?.crystals).toBe(99);
-    expect(skipped.log.some((entry) => entry.msg.includes('条件未满足'))).toBe(true);
-  });
-
-  it('命运主宰：每回合结束水晶 +2', () => {
-    const lord = EXT2_CARDS.find((def) => def.id === 80)!;
-    const base = withPlayed(toPlay(draftAll(setup())), 0, [{ i: lord.id, u: 8100 }]);
-    const prepared: SeasonsState = { ...base, turnOwner: 0, month: 0 };
-    const before = prepared.players[0]!.crystals;
-    const after = apply(prepared, 0, { type: 'end-turn' });
-    expect(after.players[0]?.crystals).toBe(before + 2);
-  });
-
-  it('魔法皇冠：场上魔法物品 ≥3 时回合结束水晶 +5', () => {
-    const crown = EXT1_CARDS.find((def) => def.id === 53)!;
-    const magic = BASE_CARDS.filter((def) => def.type === 'magic_item').slice(0, 3);
-    const base = withPlayed(
-      toPlay(draftAll(setup())),
-      0,
-      [{ i: crown.id, u: 8200 }, ...magic.map((def, index) => ({ i: def.id, u: 8300 + index }))],
-    );
-    const prepared: SeasonsState = { ...base, turnOwner: 0, month: 0 };
-    const before = prepared.players[0]!.crystals;
-    const after = apply(prepared, 0, { type: 'end-turn' });
-    expect(after.players[0]?.crystals).toBe(before + 5);
-  });
-
-  it('魔法法师：换季时每位对手给 1 水晶', () => {
-    const mage = EXT1_CARDS.find((def) => def.id === 70)!;
-    const base = withPlayed(toPlay(draftAll(setup())), 0, [{ i: mage.id, u: 8400 }]);
-    const prepared: SeasonsState = {
-      ...base,
-      turnOwner: 0,
-      month: 2,
-      players: base.players.map((player) => ({ ...player, crystals: 5 })),
-    };
-    const after = apply(prepared, 0, { type: 'end-turn' });
-    expect(after.players[0]?.crystals).toBe(6);
-    expect(after.players[1]?.crystals).toBe(4);
-    expect(after.log.some((entry) => entry.msg.includes('魔法法师'))).toBe(true);
-  });
-
-  it('命运小径：换季时抽 1 张牌', () => {
-    const path = EXT2_CARDS.find((def) => def.id === 81)!;
-    const base = withPlayed(toPlay(draftAll(setup())), 0, [{ i: path.id, u: 8500 }]);
-    const prepared: SeasonsState = { ...base, turnOwner: 0, month: 2 };
-    const beforeHand = prepared.players[0]!.hand.length;
-    const beforeDeck = prepared.deck.length;
-    const after = apply(prepared, 0, { type: 'end-turn' });
-    expect(after.players[0]?.hand.length).toBe(beforeHand + 1);
-    expect(after.deck.length).toBe(beforeDeck - 1);
-  });
-
-  it('小仙灵：对手激活时自己得 1 水晶', () => {
-    const base = toPlay(draftAll(seasons.setup(2, { extensions: ['base', 'ext1', 'ext2'] }, createRng('ext-act2'))));
-    const spirit = [...EXT1_CARDS, ...EXT2_CARDS].find((def) => (def.effect?.typeKey ?? def.effect?.type) === 'opponent_action_reward'
-      && def.effect.triggerKind === 'opponent_activate')!;
-    const idol = BASE_CARDS.find((def) => (def.effect?.typeKey ?? def.effect?.type) === 'per_familiar_crystal')!;
-    const state = withPlayed(base, 1, [{ i: spirit.id, u: 9600 }]);
-    const prepared: SeasonsState = {
-      ...state,
-      turnOwner: 0,
-      players: state.players.map((player) =>
-        player.seat === 0
-          ? {
-              ...player,
-              hand: [...player.hand, { i: idol.id, u: 9601 }],
-              gauge: player.played.length + 1,
-              energies: { water: 5, air: 5, fire: 5, earth: 5 },
-              crystals: 0,
-            }
-          : player,
-      ),
-    };
-    const summoned = apply(prepared, 0, { type: 'summon', cardUid: 9601 });
-    const before = summoned.players[1]!.crystals;
-    const activated = apply(summoned, 0, { type: 'activate', cardUid: 9601 });
-    expect(activated.players[1]?.crystals).toBe(before + 1);
-  });
-
-  it('命运尖塔：召唤后元素储备上限 +2', () => {
-    const spire = EXT2_CARDS.find((def) => def.effect?.typeKey === 'fates_spire')!;
-    const state = summonExt(toPlay(draftAll(seasons.setup(2, { extensions: ['base', 'ext2'] }, createRng('spire')))), 0, spire);
-    expect(state.players[0]?.maxEnergy).toBe(9);
-  });
-
-  it('皇家书记官：对手召唤时自己抽 1 张', () => {
-    const clerk = EXT1_CARDS.find((def) => def.id === 58)!;
-    const cheap = BASE_CARDS.find((def) => def.id === 41)!;
-    const base = withPlayed(toPlay(draftAll(setup())), 1, [{ i: clerk.id, u: 8600 }]);
-    const prepared: SeasonsState = {
-      ...base,
-      turnOwner: 0,
-      players: base.players.map((player) =>
-        player.seat === 0
-          ? { ...player, hand: [...player.hand, { i: cheap.id, u: 8700 }], gauge: player.played.length + 1 }
-          : player,
-      ),
-    };
-    const beforeHand = prepared.players[1]!.hand.length;
-    const after = apply(prepared, 0, { type: 'summon', cardUid: 8700 });
-    expect(after.players[1]?.hand.length).toBe(beforeHand + 1);
-  });
-
-  it('命运主宰：回合结束水晶 +2', () => {
-    const base = actionPhase('ext-end');
-    const prepared: SeasonsState = {
-      ...base,
-      turnOwner: 0,
-      players: base.players.map((player) =>
-        player.seat === 0 ? { ...player, played: [...player.played, { i: 80, u: 8001 }] } : player,
-      ),
-    };
-    const before = prepared.players[0]!.crystals;
-    const after = apply(prepared, 0, { type: 'end-turn' });
-    expect(after.players[0]?.crystals).toBe(before + 2);
-  });
-
-  it('魔法皇冠：场上 3 张魔法物品时回合结束水晶 +5，不满足时不加', () => {
-    const magic = BASE_CARDS.filter((def) => def.type === 'magic_item').slice(0, 3);
-    const base = actionPhase('ext-crown');
-    const withThree: SeasonsState = {
-      ...base,
-      turnOwner: 0,
-      players: base.players.map((player, seat) =>
-        seat === 0
-          ? {
-              ...player,
-              played: [
-                ...player.played,
-                ...magic.map((def, index) => ({ i: def.id, u: 8100 + index })),
-                { i: 53, u: 8199 },
-              ],
-            }
-          : player,
-      ),
-    };
-    const before = withThree.players[0]!.crystals;
-    const after = apply(withThree, 0, { type: 'end-turn' });
-    expect(after.players[0]?.crystals).toBe(before + 5);
-
-    const withOne: SeasonsState = {
-      ...withThree,
-      players: withThree.players.map((player, seat) =>
-        seat === 0
-          ? { ...player, played: [{ i: magic[0]!.id, u: 8200 }, { i: 53, u: 8201 }] }
-          : player,
-      ),
-    };
-    const beforeOne = withOne.players[0]!.crystals;
-    const afterOne = apply(withOne, 0, { type: 'end-turn' });
-    expect(afterOne.players[0]?.crystals).toBe(beforeOne);
-  });
-
-  it('命运之路：储备 ≤1 时回合结束排队选 2 个能量', () => {
-    const base = actionPhase('ext-path');
-    const prepared: SeasonsState = {
-      ...base,
-      turnOwner: 0,
-      players: base.players.map((player) =>
-        player.seat === 0
-          ? {
-              ...player,
-              played: [...player.played, { i: 72, u: 8300 }],
-              energies: { water: 0, air: 0, fire: 0, earth: 0 },
-            }
-          : player,
-      ),
-    };
-    const after = apply(prepared, 0, { type: 'end-turn' });
-    expect(after.pendingChoice?.key).toBe('turn_end_energy');
-    expect(after.pendingChoice?.options.amount).toBe(2);
-  });
-
-  /** month=2（冬季最后一个月）+ 剩余骰点 1：两人结束回合后换季。 */
-  function seasonChangeReady(played: PlayedRef, seat = 0): SeasonsState {
-    const base = actionPhase(`ext-season-${played.i}`);
-    const zero = { summon: false, transmute: false, card: false, crystals: 0, water: 0, air: 0, fire: 0, earth: 0 };
-    return {
-      ...base,
-      month: 2,
-      turnOwner: 0,
-      season: {
-        ...base.season!,
-        index: 0,
-        dice: base.season!.dice.map((die) => ({ ...die, pickedBy: null, pip: 1, rewards: zero })),
-      },
-      players: base.players.map((player) =>
-        player.seat === seat
-          ? { ...player, played: [...player.played, played], crystals: 5 }
-          : { ...player, crystals: 5 },
-      ),
-    };
-  }
-
-  it('魔法法师：换季时每位对手给 1 水晶', () => {
-    const ready = seasonChangeReady({ i: 70, u: 8400 });
-    const afterFirst = apply(ready, 0, { type: 'end-turn' });
-    const afterSecond = apply(afterFirst, 1, { type: 'end-turn' });
-    expect(afterSecond.month).toBe(3);
-    expect(afterSecond.season?.index).toBe(1);
-    // 旧引擎是「偷」：对手 −1、持有者 +1。
-    expect(afterSecond.players[1]?.crystals).toBe(4);
-    expect(afterSecond.players[0]?.crystals).toBe(6);
-  });
-
-  it('命运小径：换季时自己抽 1 张', () => {
-    const ready = seasonChangeReady({ i: 81, u: 8500 });
-    const handBefore = ready.players[0]!.hand.length;
-    const deckBefore = ready.deck.length;
-    const afterFirst = apply(ready, 0, { type: 'end-turn' });
-    const afterSecond = apply(afterFirst, 1, { type: 'end-turn' });
-    expect(afterSecond.players[0]?.hand.length).toBe(handBefore + 1);
-    expect(afterSecond.deck.length).toBe(deckBefore - 1);
-  });
-});
-
-describe('seasons 扩展包激活效果', () => {
-  const playState = () => toPlay(draftAll(seasons.setup(2, { extensions: ['base', 'ext1', 'ext2'] }, createRng('ext-act'))));
-
-  function setupActivation(cardId: number) {
-    const base = playState();
-    const state: SeasonsState = {
-      ...base,
-      turnOwner: 0,
-      players: [
-        {
-          ...base.players[0]!,
-          hand: [...base.players[0]!.hand, { i: cardId, u: 8800 }],
-          gauge: base.players[0]!.played.length + 1,
-          energies: { water: 5, air: 5, fire: 5, earth: 5 },
-          maxEnergy: 40,
-          crystals: 0,
-        },
-        base.players[1]!,
-      ],
-    };
-    const summoned = apply(state, 0, { type: 'summon', cardUid: 8800 });
-    expect(summoned.players[0]?.played.some((card) => card.u === 8800)).toBe(true);
-    return { state: summoned };
-  }
-
-  it('魔法之剑：弃 1 能量得 7 水晶', () => {
-    const { state } = setupActivation(62);
-    const activated = apply(state, 0, { type: 'activate', cardUid: 8800 });
-    const pending = activated.pendingChoice!;
-    expect(pending.kind).toBe('element_alloc');
-    expect(pending.options.mode).toBe('pay');
-    const done = apply(activated, 0, {
-      type: 'resolve-choice',
-      choice: { water: 1, air: 0, fire: 0, earth: 0 },
-    });
-    expect(done.players[0]?.crystals).toBe(7);
-    expect(done.players[0]?.energies.water).toBe(4);
-  });
-
-  it('皇家大法师：弃 2 能量每位对手 -4', () => {
-    const { state } = setupActivation(60);
-    const activated = apply(state, 0, { type: 'activate', cardUid: 8800 });
-    const before = activated.players[1]!.crystals;
-    const done = apply(activated, 0, {
-      type: 'resolve-choice',
-      choice: { water: 2, air: 0, fire: 0, earth: 0 },
-    });
-    expect(done.players[1]?.crystals).toBe(Math.max(0, before - 4));
-  });
-
-  it('皇家巫师：弃 1 能量后继续选 3 个能量', () => {
-    const { state } = setupActivation(59);
-    const activated = apply(state, 0, { type: 'activate', cardUid: 8800 });
-    const paid = apply(activated, 0, {
-      type: 'resolve-choice',
-      choice: { water: 1, air: 0, fire: 0, earth: 0 },
-    });
-    expect(paid.pendingChoice?.key).toBe('pay_energy_reward_energy');
-    const done = apply(paid, 0, {
-      type: 'resolve-choice',
-      choice: { water: 0, air: 3, fire: 0, earth: 0 },
-    });
-    expect(done.players[0]?.energies.air).toBe(7);
-  });
-});
-
 describe('seasons setup', () => {
   it('2 人局：每人 9 张轮抽牌，牌堆剩 82 张，实例 uid 唯一', () => {
     const state = setup();
@@ -1114,6 +728,58 @@ describe('seasons 储备语义（卡上能量 = 储备区）', () => {
     expect((other.pendingChoice?.options as Record<string, unknown>).available).toBeUndefined();
   });
 });
+
+  it('流水护符卡上的能量可以支付召唤费用', () => {
+    const amulet = BASE_CARDS.find((card) => card.nameZh === '流水护符')!;
+    const target = BASE_CARDS.find((card) => card.nameZh === '深凝视的提图斯')!;
+    const base = summonReady();
+    const state: SeasonsState = {
+      ...base,
+      players: base.players.map((player, seat) =>
+        seat === 0
+          ? {
+              ...player,
+              energies: { water: 0, air: 0, fire: 0, earth: 0 },
+              played: [...player.played, { i: amulet.id, u: 9401, stored: { fire: 2 } }],
+              hand: [{ i: target.id, u: 9402 }, ...player.hand],
+            }
+          : player,
+      ),
+    };
+    const res = seasons.reduce(state, 0, { type: 'summon', cardUid: 9402 }, ctx);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    // 费用 1 火从卡上能量扣，而不是储备区。
+    const amuletAfter = res.state.players[0]?.played.find((card) => card.u === 9401);
+    expect(amuletAfter?.stored?.fire).toBe(1);
+    expect(res.state.players[0]?.energies.fire).toBe(0);
+  });
+
+  it('流水护符卡上的能量可以用于转换（晶化）', () => {
+    const amulet = BASE_CARDS.find((card) => card.nameZh === '流水护符')!;
+    const base = summonReady();
+    const state: SeasonsState = {
+      ...base,
+      turnOwner: 0,
+      players: base.players.map((player, seat) =>
+        seat === 0
+          ? {
+              ...player,
+              canTransmute: true,
+              energies: { water: 0, air: 0, fire: 0, earth: 0 },
+              played: [...player.played, { i: amulet.id, u: 9403, stored: { water: 2 } }],
+            }
+          : player,
+      ),
+    };
+    const before = state.players[0]?.crystals ?? 0;
+    const res = seasons.reduce(state, 0, { type: 'transmute', element: 'water' }, ctx);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const amuletAfter = res.state.players[0]?.played.find((card) => card.u === 9403);
+    expect(amuletAfter?.stored?.water).toBe(1);
+    expect(res.state.players[0]?.crystals).toBeGreaterThan(before);
+  });
 
 describe('seasons die rewards', () => {
   it('首位玩家在行动阶段开始时结算骰面奖励，后位玩家暂不结算', () => {
@@ -1794,6 +1460,7 @@ describe('seasons pending choice', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.state.players[0]?.crystals).toBe((state.players[0]?.crystals ?? 0) + 10);
+    expect(res.state.players[0]?.gauge).toBe((state.players[0]?.gauge ?? 0) + 1);
     expect(res.state.pendingChoice?.options.amount).toBe(2);
 
     const done = seasons.reduce(
@@ -2342,6 +2009,24 @@ describe('seasons activate', () => {
   });
 });
 
+  it('偷窃妖精：对手激活时，自己水晶 +2（1 来自对手）', () => {
+    const base = activateReady(['随从偶像']);
+    const fairies = BASE_CARDS.find((card) => card.nameZh === '偷窃妖精')!;
+    const state: SeasonsState = {
+      ...base,
+      players: base.players.map((player) =>
+        player.seat === 1
+          ? { ...player, crystals: 3, played: [{ i: fairies.id, u: 7300 }] }
+          : { ...player, crystals: 5 },
+      ),
+    };
+    const res = seasons.reduce(state, 0, { type: 'activate', cardUid: 7000 }, ctx);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.state.players[0]?.crystals).toBe(4);
+    expect(res.state.players[1]?.crystals).toBe(5);
+  });
+
 describe('seasons activate (batch 2)', () => {
   it('知识药水：牺牲后获得 5 个任意能量', () => {
     const state = activateReady(['知识药水']);
@@ -2824,7 +2509,7 @@ describe('seasons mirror and dreams', () => {
 });
 
 describe('seasons summon choices (batch 2)', () => {
-  it('吸血鬼王冠：抽 1 按声望得能量，再弃掉该牌', () => {
+  it('吸血鬼王冠：选择抽或弃，再按声望得能量', () => {
     const crown = BASE_CARDS.find((card) => card.nameZh === '吸血鬼王冠')!;
     const top = BASE_CARDS.find((card) => card.points >= 3 && card.id !== crown.id)!;
     const base = summonReady();
@@ -2840,33 +2525,51 @@ describe('seasons summon choices (batch 2)', () => {
     const res = seasons.reduce(state, 0, { type: 'summon', cardUid: 9101 }, ctx);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.state.pendingChoice?.kind).toBe('element_alloc');
-    expect(res.state.pendingChoice?.options.amount).toBe(top.points);
-    expect(res.state.pendingCards?.map((card) => card.u)).toEqual([9100]);
+    expect(res.state.pendingChoice?.kind).toBe('branch');
+    expect(res.state.pendingChoice?.options.points).toBe(top.points);
 
-    const allocated = seasons.reduce(
+    // 选「抽入手牌」：牌进手牌，不再弃掉，并继续选能量。
+    const drawn = seasons.reduce(
       res.state,
       0,
-      { type: 'resolve-choice', choice: { water: top.points } },
+      { type: 'resolve-choice', choice: { id: 'draw' } },
       ctx,
     );
-    expect(allocated.ok).toBe(true);
-    if (!allocated.ok) return;
-    // summonReady 的储备早已超过上限：溢出会先挂 energy_swap，结算后才继续弃牌链路。
-    let finished = allocated.state;
-    if (finished.pendingChoice?.kind === 'energy_swap') {
-      const swapped = seasons.reduce(
-        finished,
-        0,
-        { type: 'resolve-choice', choice: { water: 7 } },
-        ctx,
-      );
-      expect(swapped.ok).toBe(true);
-      if (!swapped.ok) return;
-      finished = swapped.state;
-    }
-    expect(finished.discard.some((card) => card.u === 9100)).toBe(true);
-    expect(finished.pendingCards).toBeNull();
+    expect(drawn.ok).toBe(true);
+    if (!drawn.ok) return;
+    expect(drawn.state.players[0]?.hand.some((card) => card.u === 9100)).toBe(true);
+    expect(drawn.state.discard.some((card) => card.u === 9100)).toBe(false);
+    expect(drawn.state.pendingChoice?.kind).toBe('element_alloc');
+    expect(drawn.state.pendingChoice?.options.amount).toBe(top.points);
+  });
+
+  it('吸血鬼王冠：选「弃掉」时牌进弃牌堆', () => {
+    const crown = BASE_CARDS.find((card) => card.nameZh === '吸血鬼王冠')!;
+    const top = BASE_CARDS.find((card) => card.points >= 3 && card.id !== crown.id)!;
+    const base = summonReady();
+    const state: SeasonsState = {
+      ...base,
+      deck: [...base.deck, { i: top.id, u: 9102 }],
+      players: base.players.map((player, seat) =>
+        seat === 0
+          ? { ...player, hand: [{ i: crown.id, u: 9103 }, ...player.hand] }
+          : player,
+      ),
+    };
+    const res = seasons.reduce(state, 0, { type: 'summon', cardUid: 9103 }, ctx);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const discarded = seasons.reduce(
+      res.state,
+      0,
+      { type: 'resolve-choice', choice: { id: 'discard' } },
+      ctx,
+    );
+    expect(discarded.ok).toBe(true);
+    if (!discarded.ok) return;
+    expect(discarded.state.discard.some((card) => card.u === 9102)).toBe(true);
+    expect(discarded.state.players[0]?.hand.some((card) => card.u === 9102)).toBe(false);
+    expect(discarded.state.pendingChoice?.kind).toBe('element_alloc');
   });
 
   it('神圣圣杯：抽 4 张，免费召唤 1 张，其余弃掉', () => {
@@ -2902,7 +2605,7 @@ describe('seasons summon choices (batch 2)', () => {
     expect(done.state.pendingCards).toBeNull();
   });
 
-  it('女先知娜莉亚：抽 3 张保留 1 张，其余分给对手', () => {
+  it('女先知娜莉亚：抽等于人数张，自留 1 张，其余指定给各对手', () => {
     const naria = BASE_CARDS.find((card) => card.nameZh === '女先知娜莉亚')!;
     const base = summonReady();
     const state: SeasonsState = {
@@ -2917,22 +2620,38 @@ describe('seasons summon choices (batch 2)', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.state.pendingChoice?.kind).toBe('card_list');
-    expect(res.state.pendingCards).toHaveLength(3);
+    expect(res.state.pendingCards).toHaveLength(2); // 2 人局：抽 2 张
     const keepUid = res.state.pendingCards![0]!.u;
+    const giveUid = res.state.pendingCards![1]!.u;
     const handBefore = res.state.players[0]!.hand.length;
     const oppBefore = res.state.players[1]!.hand.length;
 
-    const done = seasons.reduce(
+    const kept = seasons.reduce(
       res.state,
       0,
       { type: 'resolve-choice', choice: [keepUid] },
       ctx,
     );
-    expect(done.ok).toBe(true);
-    if (!done.ok) return;
-    expect(done.state.players[0]?.hand).toHaveLength(handBefore + 1);
-    expect(done.state.players[1]?.hand).toHaveLength(oppBefore + 2);
-    expect(done.state.discard).toHaveLength(0);
+    expect(kept.ok).toBe(true);
+    if (!kept.ok) return;
+    expect(kept.state.players[0]?.hand).toHaveLength(handBefore + 1);
+    // 剩下的 1 张由召唤者指定对手（不能自动分）。
+    expect(kept.state.pendingChoice?.kind).toBe('card_pick');
+    expect(kept.state.pendingChoice?.options.purpose).toBe('distribute');
+    expect(kept.state.players[1]?.hand).toHaveLength(oppBefore);
+
+    const given = seasons.reduce(
+      kept.state,
+      0,
+      { type: 'resolve-choice', choice: { uid: giveUid } },
+      ctx,
+    );
+    expect(given.ok).toBe(true);
+    if (!given.ok) return;
+    expect(given.state.players[1]?.hand).toHaveLength(oppBefore + 1);
+    expect(given.state.players[1]?.hand.some((card) => card.u === giveUid)).toBe(true);
+    expect(given.state.pendingChoice).toBeNull();
+    expect(given.state.pendingCards).toBeNull();
   });
 });
 
@@ -3098,7 +2817,7 @@ describe('seasons beggars horn', () => {
 });
 
 describe('seasons temporal boots', () => {
-  it('召唤时水晶 +2，并让季节轮前进所选格数', () => {
+  it('召唤时不加水晶，只让季节轮前进所选格数', () => {
     const boots = BASE_CARDS.find((card) => card.nameZh === '时光之靴')!;
     const base = summonReady();
     const state: SeasonsState = {
@@ -3114,7 +2833,7 @@ describe('seasons temporal boots', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.state.pendingChoice?.kind).toBe('month_advance');
-    expect(res.state.players[0]?.crystals).toBe(7);
+    expect(res.state.players[0]?.crystals).toBe(5);
 
     const done = seasons.reduce(
       res.state,

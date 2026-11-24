@@ -17,38 +17,27 @@ describe('seasons catalog / options', () => {
     expect(seasonsCatalog.minPlayers).toBe(2);
     expect(seasonsCatalog.maxPlayers).toBe(4);
     expect(seasonsCatalog.options).toHaveLength(1);
-    const extensionOption = seasonsCatalog.options[0];
-    expect(extensionOption.id).toBe('extensions');
-    expect(extensionOption.type).toBe('multi');
-    const values = extensionOption.choices.map((c) => c.value);
-    for (const value of extensionOption.default as string[]) {
-      expect(values).toContain(value);
-    }
-    expect(values).toEqual(['base', 'ext1', 'ext2']);
+    const option = seasonsCatalog.options[0]!;
+    expect(option.id).toBe('customDeck');
+    expect(option.type).toBe('select');
+    expect(option.default).toBe('');
+    expect(option.choices.map((c) => c.value)).toEqual(['']);
   });
 
   it('默认选项通过校验，且与 catalog 默认值一致', () => {
     expect(seasonsOptionsSchema.parse(seasonsDefaultOptions)).toEqual(seasonsDefaultOptions);
-    expect(seasonsDefaultOptions).toEqual({ extensions: ['base'] });
+    expect(seasonsDefaultOptions).toEqual({});
   });
 
-  it('扩展包至少选一个、不接受未知扩展', () => {
-    expect(seasonsOptionsSchema.safeParse({ extensions: [] }).success).toBe(false);
-    expect(seasonsOptionsSchema.safeParse({ extensions: ['ext1'] }).success).toBe(true);
-    expect(seasonsOptionsSchema.safeParse({ extensions: ['base', 'ext1', 'ext2'] }).success).toBe(true);
-    expect(seasonsOptionsSchema.safeParse({ extensions: ['ext3'] }).success).toBe(false);
-    expect(seasonsOptionsSchema.safeParse({}).success).toBe(false);
-    expect(seasonsOptionsSchema.safeParse({ extensions: ['base'], extra: 1 }).success).toBe(false);
-    // 自定义卡池（未来组牌用）：逗号分隔的 id 串。
-    expect(
-      seasonsOptionsSchema.safeParse({ extensions: ['base'], customDeck: '1, 2,3' }).success,
-    ).toBe(true);
-    expect(
-      seasonsOptionsSchema.safeParse({ extensions: ['base'], customDeck: '1,a' }).success,
-    ).toBe(false);
-    expect(
-      seasonsOptionsSchema.safeParse({ extensions: ['base'], customDeck: '' }).success,
-    ).toBe(false);
+  it('接受自定义卡池、拒绝非法 id 串与多余键', () => {
+    // 自定义卡池（组牌 / 压力测试用）：逗号分隔的 id 串。
+    expect(seasonsOptionsSchema.safeParse({ customDeck: '1, 2,3' }).success).toBe(true);
+    expect(seasonsOptionsSchema.safeParse({}).success).toBe(true);
+    expect(seasonsOptionsSchema.safeParse({ customDeck: '1,a' }).success).toBe(false);
+    expect(seasonsOptionsSchema.safeParse({ customDeck: '' }).success).toBe(false);
+    expect(seasonsOptionsSchema.safeParse({ customDeck: '1,2', extra: 1 }).success).toBe(false);
+    // 扩展包选项已移除。
+    expect(seasonsOptionsSchema.safeParse({ extensions: ['base'] }).success).toBe(false);
   });
 });
 

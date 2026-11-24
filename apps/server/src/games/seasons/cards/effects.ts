@@ -1,4 +1,5 @@
 import type {
+  CardRef,
   Element,
   SeasonsCardDef,
   SeasonsCardEffect,
@@ -52,17 +53,6 @@ export function summonEffectKey(effect: SeasonsCardEffect): string {
 }
 
 export const SUMMON_EFFECTS: Readonly<Record<string, SummonEffectHandler>> = {
-  // 时光之靴：召唤时水晶 +2（月份移动由 pendingChoice 处理）。
-  temporal_boots: (state, seat, card) => {
-    const next = {
-      ...state,
-      players: state.players.map((player) =>
-        player.seat === seat ? { ...player, crystals: player.crystals + 2 } : player,
-      ),
-    };
-    return logEffect(next, seat, card, '水晶 +2');
-  },
-
   // 神圣圣杯（召唤位不足）：抽 4 张全部弃掉。
   divine_chalice: (state, seat, card) => {
     const me = state.players[seat];
@@ -81,21 +71,6 @@ export const SUMMON_EFFECTS: Readonly<Record<string, SummonEffectHandler>> = {
     );
   },
 
-  // 吸血鬼王冠（声望 0 的牌）：直接抽 1 弃 1，不得能量。
-  vampiric_crown: (state, seat, card) => {
-    const top = state.deck[state.deck.length - 1];
-    if (!top || (cardById(top.i)?.points ?? 0) > 0) return state;
-    return logEffect(
-      {
-        ...state,
-        deck: state.deck.slice(0, -1),
-        discard: [...state.discard, top],
-      },
-      seat,
-      card,
-      `弃掉牌堆顶「${cardById(top.i)?.nameZh ?? top.i}」（声望 0）`,
-    );
-  },
   // 空气护符：召唤计量条前进 N 格
   summon_gauge: (state, seat, _card, effect) => {
     const amount = effect.amount ?? 0;
@@ -194,12 +169,13 @@ export const SUMMON_EFFECTS: Readonly<Record<string, SummonEffectHandler>> = {
     return logEffect(next, seat, card, '水晶 +10，水能量 +1');
   },
 
-  // 阿鲁斯的诅咒典籍：召唤时水晶 +10（能量部分由选择弹窗结算）。
+  // 阿鲁斯的诅咒典籍：召唤时水晶 +10、召唤等级 +1（能量部分由选择弹窗结算）。
   cursed_treatise: (state, seat, card) => {
     const next = patchPlayer(state, seat, (player) => ({
       crystals: player.crystals + 10,
+      gauge: player.gauge + 1,
     }));
-    return logEffect(next, seat, card, '水晶 +10');
+    return logEffect(next, seat, card, '水晶 +10，召唤等级 +1');
   },
 
   // 元素护符：按实际支付的元素结算；水（选能量）需要选择，见 summonNeedsChoice。
@@ -272,7 +248,8 @@ export interface SummonChoiceRequest {
     | 'card_list'
     | 'card_pick'
     | 'multi_player_pick'
-    | 'month_advance';
+    | 'month_advance'
+    | 'branch';
   key: string;
   /** element_alloc：reserve 进储备区；card 置于刚召唤的卡上。 */
   target?: 'reserve' | 'card';
@@ -289,8 +266,12 @@ export interface SummonChoiceRequest {
   then?: 'discard_pending';
   /** card_pick：免费召唤后把其余 pendingCards 弃掉（神圣圣杯）。 */
   discardRest?: boolean;
-  /** card_list：未保留的牌按顺序分给对手（女先知娜莉亚）。 */
-  distribute?: boolean;
+  /** card_list：未保留的牌分给对手；'choose' 表示由召唤者逐张指定（娜莉亚）。 */
+  distribute?: boolean | 'choose';
+  /** branch：牌堆顶的牌与它的声望（吸血鬼王冠）。 */
+  card?: CardRef;
+  points?: number;
+  branches?: { id: string; label?: string; enabled?: boolean }[];
   /** element_alloc：允许只分配一部分（路易斯复制）。 */
   allowPartial?: boolean;
   /** multi_player_pick：依次由这些座位的玩家选择（西拉斯/阿姆苏格）。 */
@@ -476,20 +457,21 @@ export function summonChoiceFor(
     };
   }
 
-  // 吸血鬼王冠：抽 1，按卡面声望点得等量能量，之后弃掉该牌。
+  // 吸血鬼王冠：选择「抽入手牌」或「弃掉」，再按该牌声望得等量能量。
   if (key === 'vampiric_crown') {
     const top = state.deck[state.deck.length - 1];
-    const points = top ? (cardById(top.i)?.points ?? 0) : 0;
-    if (!top || points <= 0) return null;
+    if (!top) return null;
+    const points = cardById(top.i)?.points ?? 0;
     return {
-      kind: 'element_alloc',
+      kind: 'branch',
       key: 'vampiric_crown',
-      target: 'reserve',
-      amount: points,
-      draw: 1,
-      then: 'discard_pending',
-      title: `获得 ${points} 个能量（弃掉抽到的牌）`,
-      label: '获得',
+      card: top,
+      points,
+      branches: [
+        { id: 'draw', label: '抽入手牌' },
+        { id: 'discard', label: '弃掉' },
+      ],
+      title: `吸血鬼王冠：抽 1 张牌入手，或弃掉它（声望 ${points}，获得等量能量）`,
     };
   }
 
@@ -509,16 +491,16 @@ export function summonChoiceFor(
     };
   }
 
-  // 女先知娜莉亚：抽人数 +1 张，自留 1 张，其余分给对手。
+  // 女先知娜莉亚：抽等于玩家人数张，自留 1 张，其余由召唤者逐张指定给各对手。
   if (key === 'naria') {
-    const count = state.players.length + 1;
+    const count = state.players.length;
     return {
       kind: 'card_list',
       key: 'naria',
       amount: count,
       keep: 1,
       draw: count,
-      distribute: true,
+      distribute: 'choose',
       title: `抽 ${count} 张，保留 1 张，其余分给对手`,
       label: '保留',
     };

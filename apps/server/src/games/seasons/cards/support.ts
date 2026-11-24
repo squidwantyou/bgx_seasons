@@ -27,7 +27,6 @@ export const IMPLEMENTED_EFFECT_KEYS = {
     'cursed_treatise',
     'per_magic_item_energy',
     'sid_nightshare',
-    'summon_condition',
   ]),
   activation: new Set([
     'balance_of_ishtar',
@@ -44,7 +43,6 @@ export const IMPLEMENTED_EFFECT_KEYS = {
     'necrotic_kriss',
     'mirror_of_seasons',
     'cursed_relic',
-    'pay_energy_reward',
   ]),
   permanent: new Set([
     'on_play_card_crystal',
@@ -59,12 +57,6 @@ export const IMPLEMENTED_EFFECT_KEYS = {
     'arcano_leech',
     'titus',
     'thieving_fairies',
-    'turn_condition_reward',
-    'opponent_action_reward',
-    'season_opponent_tax',
-    'turn_flat_reward',
-    'season_draw',
-    'fates_spire',
   ]),
   dice_change: new Set(['die_of_malice']),
   score: new Set(['ragfields_helm', 'points', 'score_per_energy', 'sealed_chest']),

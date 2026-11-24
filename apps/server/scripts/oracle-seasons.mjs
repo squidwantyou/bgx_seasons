@@ -9,24 +9,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { BASE_CARDS } from '../dist/games/seasons/cards/base.js';
-import { EXT_CARDS } from '../dist/games/seasons/cards/base.js';
 import { DICE_BY_ELEMENT } from '../dist/games/seasons/rules/dice.js';
 
 const OLD = '/home/squid/seasons_web/seasons-web/src/games/seasons';
 const readCards = (file) => JSON.parse(fs.readFileSync(path.join(OLD, file), 'utf8')).cards;
-const oldCards = [
-  ...readCards('cards.json'),
-  ...readCards('cards.ext1.json'),
-  ...readCards('cards.ext2.json'),
-];
+const oldCards = readCards('cards.json');
 const oldDice = JSON.parse(fs.readFileSync(path.join(OLD, 'dice.json'), 'utf8'));
 
 const problems = [];
 const detail = (what, a, b) =>
   problems.push(`${what}\n  新: ${JSON.stringify(a)}\n  旧: ${JSON.stringify(b)}`);
 
-// ---- 卡表：id / 名称 / 类型 / 分数 / 费用 / 效果元数据（基础 + 扩展）----
-const ALL_CARDS = [...BASE_CARDS, ...EXT_CARDS];
+// ---- 卡表：id / 名称 / 类型 / 分数 / 费用 / 效果元数据 ----
+const ALL_CARDS = BASE_CARDS;
 const byId = new Map(ALL_CARDS.map((card) => [card.id, card]));
 for (const old of oldCards) {
   const mine = byId.get(old.id);
@@ -100,5 +95,5 @@ if (problems.length > 0) {
   console.error(`✗ oracle 发现 ${problems.length} 处差异：\n\n${problems.join('\n\n')}`);
   process.exitCode = 1;
 } else {
-  console.log(`OK 差分基线一致：${BASE_CARDS.length} 张基础卡 + ${EXT_CARDS.length} 张扩展卡 + ${oldDice.seasons.length} 季 × 5 骰 × 6 面`);
+  console.log(`OK 差分基线一致：${BASE_CARDS.length} 张卡 + ${oldDice.seasons.length} 季 × 5 骰 × 6 面`);
 }

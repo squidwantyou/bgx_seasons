@@ -8,11 +8,11 @@
 
 | 项 | 值 |
 |---|---|
-| 当前阶段 | Phase 5 卡牌框架（用户 11-23 拍板：T3.6b 不装 Playwright、T4.4b 由用户人肉测试、扩展卡占位图暂缓；重点转向「卡牌组成灵活可变、任意卡池都能稳健运行」） |
-| 当前任务 | T5.1 储备语义统一 ✅（卡上能量=普通储备、离场超上限让玩家选择弃置）；T5.2 卡池校验/注册表 ✅（任意 id 卡池、未实现效果在 setup 即报错）；T5.3 效果处理器注册表（把 summon/activate/turn-end/score 的 if/switch 抽成按 key 注册的表）待做。剩余人工项：T4.4b 由用户手测；T3.6b 按用户决定不装 Playwright；T4.7b 部署不执行 |
+| 当前阶段 | Phase 5 卡牌框架（用户 11-23 拍板：T3.6b 不装 Playwright、T4.4b 由用户人肉测试；11-24 又裁定删除扩展卡 51–90、只保留基础 50 张，并修正 5 张卡效果） |
+| 当前任务 | T5.1 储备语义统一 ✅；T5.2 卡池校验/注册表 ✅（现只保留基础 50 张，`customDeck` 仍可指定）；T5.4 卡池压力测试 ✅（参数改为 `[局数] [人数] [随机池大小]`）；T5.5 卡效修正 ✅（4/7/12/36/42 按用户裁定、41 偷窃妖精补实现、扩展 51–90 删除）。待做：T5.3 效果处理器注册表。剩余人工项：T4.4b 由用户手测、T3.6b 不装 Playwright、T4.7b 不再重复部署 |
 | 迷你版目标 | 3 个夜间时段（约 6 次运行）产出「2 人可完整打完一局」 |
 | 完整版目标 | 之后约 1 周：基础 50 卡全量 + ext1/ext2 + 打磨 |
-| 最后更新 | 2026-11-23 12:50 |
+| 最后更新 | 2026-11-24 18:10 |
 
 ## 1. 目标与边界
 
@@ -228,9 +228,10 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
   - [x] T4.1a 徽章系统（use-badge / badge-keep / 徽章 4 抽卡升级 / 终局 BADGE_PENALTY 计分已有；11-23 03:20 徽章 1/2/3/4 + badge-keep 已纳入 L1 与旧引擎逐点对照）
   - [x] T4.1b 服务端「选择队列」`pendingQueue`：同一时机多个选择按序结算（花瓶召唤后、沙漏换季、恶意之骰重掷）
   - [x] T4.1c 其余 choice kind：`energy_swap` 已实现（骰面能量奖励 + 所有储备能量获取，含 `discard_pending`/`amulet_air` 后续链路；装不下时弹窗由玩家决定保留组合，旧引擎语义）；旧引擎的 `card_list_grouped`/`card_multi`/`player_list`/`card_distribute`/`energy_multi`/`card_energy` 在新引擎里由 `multi_player_pick`/`card_pick`/`branch`/`card_list` 等价覆盖（西拉斯/阿姆苏格/龙之头骨/娜莉亚/四季之镜/贪吃锅）
-- [x] T4.2 扩展包 40 卡（ext1 魔法王国 20 张 + ext2 命运之路 20 张）
-  - [x] T4.2a 接线：卡表 `packages/protocol/src/games/seasons-cards-ext.ts`（id 51–90）+ 合并表 `seasons-cards-all.ts`；catalog/schema/默认选项支持 `ext1`/`ext2`；`buildDeck` 按选项组牌（3/4 人局 deck 也随人数变化）；前端卡表走合并表，扩展卡无卡图时用名称兜底
-  - [x] T4.2b 扩展效果：`summon_condition`（魔法骑士/魔法巨龙/命运冠军）、`pay_energy_reward`（9 张激活卡：弃能量换水晶/能量/抽牌/扣对手水晶）、`turn_condition_reward`/`turn_flat_reward`/`season_opponent_tax`/`season_draw`/`opponent_action_reward`（召唤与激活两侧）/`fates_spire`（储备上限 +2）/`on_season_change_energy`；`on_summon` 的 gain_crystals/draw_cards/gain_energy/per_magic_item_crystal/per_magic_item_energy/summon_gauge 复用既有实现。逐类单测：命运主宰（回合结束 +2 水晶）、魔法皇冠（3 张魔法物品 +5）、命运之路（储备 ≤1 排队选 2 能量）、魔法法师（换季偷对手 1 水晶）、命运小径（换季抽 1）、小仙灵（对手激活 +1 水晶）、命运尖塔（上限 +2）
+- [ ] T4.2 扩展包 —— ❌ 已撤销（用户 2026-11-24 裁定：51–90 全部是 AI 幻觉卡牌，整体删除，`ext1`/`ext2` 选项一并移除；卡池永久只保留基础 50 张）
+  - [x] ~~原接线：卡表 `seasons-cards-ext.ts`（id 51–90）+ 合并表~~（文件与选项已删除）
+  - [x] ~~原扩展效果（`summon_condition`/`pay_energy_reward`/`turn_*`/`season_*` 等）~~（数据删除后不再可达；`support.ts` 的白名单已收缩到基础 key）
+  - 历史上的扩展实现细节保留在下方 §12 日志中，仅作记录`summon_condition`（魔法骑士/魔法巨龙/命运冠军）、`pay_energy_reward`（9 张激活卡：弃能量换水晶/能量/抽牌/扣对手水晶）、`turn_condition_reward`/`turn_flat_reward`/`season_opponent_tax`/`season_draw`/`opponent_action_reward`（召唤与激活两侧）/`fates_spire`（储备上限 +2）/`on_season_change_energy`；`on_summon` 的 gain_crystals/draw_cards/gain_energy/per_magic_item_crystal/per_magic_item_energy/summon_gauge 复用既有实现。逐类单测：命运主宰（回合结束 +2 水晶）、魔法皇冠（3 张魔法物品 +5）、命运之路（储备 ≤1 排队选 2 能量）、魔法法师（换季偷对手 1 水晶）、命运小径（换季抽 1）、小仙灵（对手激活 +1 水晶）、命运尖塔（上限 +2）
   - [x] 未实现的常驻类扩展卡仍由召唤前守卫拦截（`effect_not_implemented`，不扣费），目前白名单已覆盖全部 40 张的 effect 类型
 - [x] T4.3 3–4 人局：setup 支持 2–4 人，3 人 4 颗骰 / 4 人 5 颗骰，手牌按 `hands[(i-1+n)%n]` 轮转；`rankings()` 改为同分并列名次（如 [1,1,3]），3–4 人不可认输；前端座位名扩到「甲乙丙丁」
 - [ ] T4.4 观战/重连
@@ -246,10 +247,11 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
 - [x] T4.7 打磨与部署（T4.7a 移动端样式 ✅；T4.7b 部署验证 ✅ 2026-11-23 12:47 按用户要求部署到 https://thinktwice.top/bgx/，大厅可见「四季物语」）
 
 ### Phase 5：卡牌框架（用户 11-23 指定方向）
+- [x] T5.5 卡效修正与扩展删除（2026-11-24）：删除 51–90 与 ext 选项；#4 流水护符卡上能量可用于支付/晶化；#7 时光之靴去掉水晶+2；#12 娜莉亚按人数抽、保留 1 张后由使用者逐张指定给对手；#36 吸血鬼王冠改为「抽或弃」二选一；#42 诅咒典籍追加召唤等级+1；#41 偷窃妖精补实现（对手激活时偷 1 并额外 +1）；#49 保持严格领先
 - [x] T5.1 储备语义统一：卡上能量（`reserve_slot`）与普通储备完全等价，可支付召唤/激活/徽章等一切费用；卡牌离场导致上限下降时，若超出上限则弹 `energy_discard` 让玩家选择弃掉哪些能量（`normalizeReserve` + `finish(prev,res)`，`promoteQueued` 会跳过已失效的弃置选择）
-- [x] T5.2 卡池校验与运行时注册：`validateCardPool`（id 重复/名称/分数整数/费用非负/未登记的 effect key）、`registerCards`/`cardById`（内置 90 张之外可运行时登记）、`customDeck` 选项（逗号分隔 id，任意小卡池自动校验），setup 阶段先校验后建牌堆
+- [x] T5.2 卡池校验与运行时注册：`validateCardPool`（id 重复/名称/分数整数/费用非负/未登记的 effect key）、`registerCards`/`cardById`（内置 50 张之外可运行时登记）、`customDeck` 选项（逗号分隔 id，任意小卡池自动校验），setup 阶段先校验后建牌堆
 - [ ] T5.3 效果处理器注册表：把 `summon` / `activate` / 回合末 / 换季 / 计分 里按 key 分派的 if/switch 抽成 `Record<key, handler>`，新增卡牌只登记数据 + handler，不改引擎主流程
-- [x] T5.4 卡池压力测试：`seasons-soak.mjs [局数] [人数] [扩展包] [随机池大小]`——第 4 参数给定时从内置 90 张里随机抽 N 种用 `customDeck` 入池；2 人窄池 10/12/20 与 4 人 20/30、3 人三包各 60 局全过。顺带修掉「牌堆与弃牌堆都空时抽不到牌、卡_list/card_pick 挂起无候选」的死锁：抽到的牌不足保留数时直接全部保留，空候选直接作废
+- [x] T5.4 卡池压力测试：`seasons-soak.mjs [局数] [人数] [随机池大小]`——第 4 参数给定时从 50 张里随机抽 N 种用 `customDeck` 入池（4 人至少 18 种）；2 人 10/12/20、3 人 14、4 人 20 各若干局全过。顺带修掉「牌堆与弃牌堆都空时抽不到牌、卡_list/card_pick 挂起无候选」的死锁：抽到的牌不足保留数时直接全部保留，空候选直接作废
 
 ## 10. 风险与对策
 
@@ -532,3 +534,13 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
   - 按 `docs/games/developing-games.md` §8：`pnpm build` → `bash scripts/deploy.sh`（构建并 rsync 到 `/opt/bgx/app` 与 `/var/www/bgx`，重装 bgx.service、reload Apache、健康检查）。脚本可重复执行；中途一次调用被环境中断但未产生部分部署，确认旧 index 未变后重跑成功。
   - 验证：`/bgx/api/games` 返回 `seasons`（名称/描述/6 条规则/扩展包选项/2–4 人）；`/bgx/` 200 且 index 哈希更新为 `index-DHBotQVF.js`；61 个卡图 webp 可访问；bgx.service 12:47:57 重启后 `/healthz` ok；`/opt/bgx/app` 的 dist 含 `energy_discard`（确认部署的是当前版本），用它 setup 三包 2 人得 deck 162、各 9 张手牌。
   - 未做：没有创建测试房间（避免往线上库塞数据）；真实对局留给用户手测。数据库 `/var/lib/bgx/bgx.db` 未改动。
+
+- **2026-11-24 17:48–18:10** 用户裁定：删除扩展卡 + 修正 5 张卡效果。
+  - 用户逐条裁定：#4 卡上能量可支付/晶化；#7 时光之靴无水晶+2；#12 娜莉亚抽 N 张（N=人数）、保留 1 张后由使用者指定分给各对手；#36 吸血鬼王冠入场二选一「抽」或「弃」，再按声望得能量；#42 诅咒典籍追加召唤等级+1；#49 夜行者希德严格多于所有对手；51–88（经确认含 89/90）全部删除。
+  - 执行：协议卡表 `seasons-cards-all.ts` 重写为基础 50 张、删除 `seasons-cards-ext.ts`；catalog/schema 去掉 `extensions`，只保留 `customDeck`；`support.ts` 白名单收缩到基础 key；引擎 `poolCards` 无自定义池时返回 `SEASONS_CARDS`，移除扩展常驻守卫。
+  - 卡上能量语义：#4 等非封印卡上的 `stored` 计入 `reserveElementCount`/`reserveTotal`，可支付召唤费用、可 `transmute` 晶化；`normalizeReserve` 超限只按 `energies` 判断（卡上是额外容量）；`sealed_energy`（贪吃锅）仍不可用。
+  - 解析改动：`resolveCardList` 支持 `distribute:'choose'`（娜莉亚保留后逐张 queue `card_pick purpose:'distribute'`，玩家指定交给哪位对手）；`resolveBranch` 支持 `vampiric_crown`（抽/弃牌堆顶 + 按声望选能量，非应答者视图隐藏顶牌）。
+  - 测试：删除两个扩展 describe；重写王冠/娜莉亚/时光之靴用例；新增卡上能量付费、卡上能量晶化、诅咒典籍 +1 等级、偷窃妖精触发 4 例。**169 tests 全绿**；protocol/server/web 三包 build 通过。
+  - 脚本：`oracle-seasons.mjs` / `oracle-seasons-l1.mjs` / `soak` / `size` / `view-perf` / `ui-flow` / `render-smoke` 全部改为 base-only（`customDeck` 仍支持随机小池）。结果：数据基线 50 卡一致；L1 **119 个检查点**一致；soak 2/3/4 人（含 14/20 种随机池）全过；ui-flow `OK 终局：0:-46 1:-47`；渲染冒烟 1187 次、11 种弹窗；state 136 步 avg 6386B/p95 7295B/max 7318B；view 3750 次 avg 0.0118ms。
+  - 未做：`docs/card-effects.md` 与 `bgx_seasons` 副本已同步更新为 50 张；**未部署**（用户要求：除非明确指令否则不同步 BGX 线上）。
+  - 下次：T5.3 效果处理器注册表（可选重构）；或等用户继续核对卡效（39/44/9/21/40 仍有已知差异/二义）。
