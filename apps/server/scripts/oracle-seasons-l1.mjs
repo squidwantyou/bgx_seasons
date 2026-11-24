@@ -9,12 +9,19 @@
  *
  * 用法：pnpm --filter @bgx/server build && node apps/server/scripts/oracle-seasons-l1.mjs
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { seasons } from '../dist/games/seasons/engine.js';
 import { BASE_MAX_ENERGY } from '../dist/games/seasons/rules/const.js';
 import { CARD_BY_ID } from '@bgx/protocol/games/seasons-cards-all';
 
 const OLD = '/home/squid/seasons_web/seasons-web/src/games/seasons/index.js';
+const OLD_DIR = '/home/squid/seasons_web/seasons-web/src/games/seasons';
+const CARD_DEFS = new Map(
+  JSON.parse(fs.readFileSync(path.join(OLD_DIR, 'cards.json'), 'utf8')).cards.map((card) => [card.id, card]),
+);
+let synthUid = 9000;
 const old = await import(pathToFileURL(OLD).href);
 
 const ELEMENTS = ['water', 'air', 'fire', 'earth'];
@@ -202,18 +209,7 @@ function createPaired(playerCount = 2) {
       draftHand: oldState.players[seat].draftHand.map((card) => ({ i: card.id, u: card.uid })),
     })),
   };
-  // 4g 段逐卡激活需要的卡可能在前面的段落里被抽走/弃掉；开局先预留一份，
-  // 两边同时从牌堆移除，保证牌堆一致且 4g 永远拿得到卡。
-  const RESERVED_IDS = [23, 16, 5, 25, 44, 32, 32, 26];
-  const reserve = [];
-  for (const id of RESERVED_IDS) {
-    const oldCard = oldState.deck.find((card) => card.id === id);
-    if (!oldCard) continue;
-    oldState.deck = oldState.deck.filter((card) => card !== oldCard);
-    newState = { ...newState, deck: newState.deck.filter((card) => card.u !== oldCard.uid) };
-    reserve.push({ id, oldCard, newRef: { i: oldCard.id, u: oldCard.uid } });
-  }
-  return { oldState, newState, reserve };
+  return { oldState, newState };
 }
 
 function pickFor(state, seat) {
@@ -223,7 +219,7 @@ function pickFor(state, seat) {
 // ---------------- 1. 轮抽 + 组牌 ----------------
 const allSummonedIds = [];
 for (const playerCount of [2, 3]) {
-  const { oldState, newState, reserve } = createPaired(playerCount);
+  const { oldState, newState } = createPaired(playerCount);
   let current = newState;
   compare(`setup ${playerCount} 人`, oldState, current);
 
@@ -644,20 +640,19 @@ for (const playerCount of [2, 3]) {
       let picked = locate(current, newRef);
       let oldCard = picked ? locate(oldState, oldRef, picked.u) : undefined;
       let fromReserve = false;
-      if (!picked) {
-        const index = reserve.findIndex((entry) => entry.id === cardId);
-        if (index < 0) {
-          fail(`${label}：任何区域都找不到卡 id=${cardId}（预留副本已耗尽）`);
+      if (!picked || !oldCard) {
+        // 这张牌可能已在前面段落里被用掉（弃牌/牺牲/暂存），两边都找不到。
+        // 用旧项目 cards.json 的定义合成一张（uid 用 9000+ 段，避免与真实牌冲突），
+        // 只影响本段，不会破坏轮抽/牌堆守恒。
+        const def = CARD_DEFS.get(cardId);
+        if (!def) {
+          fail(`${label}：cards.json 里找不到卡 id=${cardId}`);
           return;
         }
-        const entry = reserve.splice(index, 1)[0];
-        picked = entry.newRef;
-        oldCard = entry.oldCard;
+        synthUid += 1;
+        oldCard = { ...def, uid: synthUid };
+        picked = { i: cardId, u: synthUid };
         fromReserve = true;
-      }
-      if (!oldCard) {
-        fail(`${label}：旧引擎任何区域都找不到 uid=${picked.u}`);
-        return;
       }
       const strip = (side, uid) => {
         side.deck = side.deck.filter((card) => (card.uid ?? card.u) !== uid);

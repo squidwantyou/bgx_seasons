@@ -541,6 +541,6 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
   - 卡上能量语义：#4 等非封印卡上的 `stored` 计入 `reserveElementCount`/`reserveTotal`，可支付召唤费用、可 `transmute` 晶化；`normalizeReserve` 超限只按 `energies` 判断（卡上是额外容量）；`sealed_energy`（贪吃锅）仍不可用。
   - 解析改动：`resolveCardList` 支持 `distribute:'choose'`（娜莉亚保留后逐张 queue `card_pick purpose:'distribute'`，玩家指定交给哪位对手）；`resolveBranch` 支持 `vampiric_crown`（抽/弃牌堆顶 + 按声望选能量，非应答者视图隐藏顶牌）。
   - 测试：删除两个扩展 describe；重写王冠/娜莉亚/时光之靴用例；新增卡上能量付费、卡上能量晶化、诅咒典籍 +1 等级、偷窃妖精触发 4 例。**169 tests 全绿**；protocol/server/web 三包 build 通过。
-  - 脚本：`oracle-seasons.mjs` / `oracle-seasons-l1.mjs` / `soak` / `size` / `view-perf` / `ui-flow` / `render-smoke` 全部改为 base-only（`customDeck` 仍支持随机小池）。结果：数据基线 50 卡一致；L1 **118–121 个检查点**一致（旧引擎随机牌序导致浮动）；soak 2/3/4 人（含 14/20 种随机池）全过；ui-flow `OK 终局：0:-46 1:-47`；渲染冒烟 1187 次、11 种弹窗；state 136 步 avg 6386B/p95 7295B/max 7318B；view 3750 次 avg 0.0118ms。
+  - 脚本：`oracle-seasons.mjs` / `oracle-seasons-l1.mjs` / `soak` / `size` / `view-perf` / `ui-flow` / `render-smoke` 全部改为 base-only（`customDeck` 仍支持随机小池）。结果：数据基线 50 卡一致；L1 **118–121 个检查点**一致（旧引擎随机牌序导致浮动；4g 若目标牌已被前面段落消耗，会按 `cards.json` 合成一张 9000+ uid 的临时牌，避免随机失败）；soak 2/3/4 人（含 14/20 种随机池）全过；ui-flow `OK 终局：0:-46 1:-47`；渲染冒烟 1187 次、11 种弹窗；state 136 步 avg 6386B/p95 7295B/max 7318B；view 3750 次 avg 0.0118ms。
   - 未做：`docs/card-effects.md` 与 `bgx_seasons` 副本已同步更新为 50 张；**未部署**（用户要求：除非明确指令否则不同步 BGX 线上）。
   - 下次：T5.3 效果处理器注册表（可选重构）；或等用户继续核对卡效（39/44/9/21/40 仍有已知差异/二义）。
