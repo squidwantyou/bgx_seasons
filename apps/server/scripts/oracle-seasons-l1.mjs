@@ -664,9 +664,8 @@ for (const playerCount of [2, 3]) {
 
   // ---------------- 4g. 基础激活效果逐卡对照 ----------------
   {
-    // 只覆盖「旧引擎与新引擎都只需要 0–1 次选择」的激活卡；
-    // 生命药水（多选元素）见 §12「待确认/已知差异」——旧引擎可一次选多种元素，
-    // 新引擎当前只允许选一种，尚未对齐。
+    // 覆盖「旧引擎与新引擎都只需要 0–1 次选择」的激活卡；
+    // 生命药水（多选元素）已对齐（element_multi），场景在 4g 末尾单独覆盖。
     const runBaseActivation = (label, cardId, abilityKey, options = {}) => {
       const newRef = (card) => card.u;
       const oldRef = (card) => card.uid;
@@ -697,7 +696,10 @@ for (const playerCount of [2, 3]) {
           library2: player.library2.filter((card) => (card.uid ?? card.u) !== uid),
           library3: player.library3.filter((card) => (card.uid ?? card.u) !== uid),
           played: player.played.filter((card) => (card.uid ?? card.u) !== uid),
+          discard: (player.discard ?? []).filter((card) => (card.uid ?? card.u) !== uid),
         }));
+        if (side.discard) side.discard = side.discard.filter((card) => (card.uid ?? card.u) !== uid);
+        if (side.pendingCards) side.pendingCards = side.pendingCards.filter((card) => (card.uid ?? card.u) !== uid);
         return side;
       };
       strip(oldState, picked.u);
