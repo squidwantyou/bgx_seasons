@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
  * 四季物语 L2 冒烟：跑 N 局自动对局，每步检查不变式。
- * 用法：pnpm --filter @bgx/server build && node apps/server/scripts/seasons-soak.mjs [局数] [人数] [扩展包逗号列表]
+ * 用法：pnpm --filter @bgx/server build && node apps/server/scripts/seasons-soak.mjs [局数] [人数] [随机卡池大小]
  */
 import { seasons } from '../dist/games/seasons/engine.js';
 import { CARD_BY_ID } from '../dist/games/seasons/cards/base.js';
 
 const GAMES = Number(process.argv[2] ?? 200);
 const PLAYERS = Number(process.argv[3] ?? 2);
-// 第 4 个参数（可选）：随机卡池大小。>0 时每局从内置 90 张里随机抽 POOL_SIZE 种，
+// 第 4 个参数（可选）：随机卡池大小。>0 时每局从全部 50 张里随机抽 POOL_SIZE 种，
 // 用 customDeck 入池，验证「任意卡池都能开局并打完」。
 const POOL_SIZE = Number(process.argv[4] ?? 0);
 const ELEMENTS = ['water', 'air', 'fire', 'earth'];
@@ -27,10 +27,8 @@ function makeRng(seed) {
   };
 }
 
-const EXTENSIONS = (process.argv[4] ?? 'base').split(',');
-
 function optionsFor(seed) {
-  if (!POOL_SIZE) return { extensions: EXTENSIONS };
+  if (!POOL_SIZE) return {};
   const rnd = makeRng((seed ^ 0x9e3779b9) >>> 0);
   const ids = [...CARD_BY_ID.keys()];
   for (let i = ids.length - 1; i > 0; i -= 1) {
@@ -41,7 +39,7 @@ function optionsFor(seed) {
   if (picked.length * 2 < PLAYERS * 9) {
     throw new Error(`随机卡池太小：${picked.length} 种 = ${picked.length * 2} 张，至少要 ${PLAYERS * 9} 张`);
   }
-  return { extensions: ['base'], customDeck: picked.join(',') };
+  return { customDeck: picked.join(',') };
 }
 
 function checkInvariants(state, where) {

@@ -15,8 +15,6 @@ import { BASE_MAX_ENERGY } from '../dist/games/seasons/rules/const.js';
 import { CARD_BY_ID } from '@bgx/protocol/games/seasons-cards-all';
 
 const OLD = '/home/squid/seasons_web/seasons-web/src/games/seasons/index.js';
-// 加 --ext 时启用 ext1 + ext2（40 张），默认只跑基础 50 张。
-const EXT_MODE = process.argv.includes('--ext');
 const old = await import(pathToFileURL(OLD).href);
 
 const ELEMENTS = ['water', 'air', 'fire', 'earth'];
@@ -191,14 +189,10 @@ const oldRng = {
 function createPaired(playerCount = 2) {
   const oldState = old.createGame(
     Array.from({ length: playerCount }, (_, i) => ({ id: `p${i}`, username: `p${i}` })),
-    EXT_MODE ? { extensions: ['ext1', 'ext2'] } : {},
+    {},
   );
   oldUidMap(oldState);
-  let newState = seasons.setup(
-    playerCount,
-    { extensions: EXT_MODE ? ['base', 'ext1', 'ext2'] : ['base'] },
-    oldRng,
-  );
+  let newState = seasons.setup(playerCount, {}, oldRng);
   newState = {
     ...newState,
     deck: oldState.deck.map((card) => ({ i: card.id, u: card.uid })),
@@ -267,10 +261,7 @@ for (const playerCount of [2, 3]) {
   const summonedIds = allSummonedIds;
   for (const seat of [0, 1]) {
     for (let index = 0; index < 3; index++) {
-    const picked =
-      EXT_MODE && seat === 0 && index === 0
-        ? current.deck.find((ref) => ref.i > 50 && qualifies(ref)) ?? current.deck.find((ref) => qualifies(ref))
-        : current.deck.find((ref) => qualifies(ref));
+    const picked = current.deck.find((ref) => qualifies(ref));
     if (!picked) break;
     const cardId = picked.i;
     // 旧引擎的卡对象要先取出来（带完整 cost/effect），再把牌从牌堆移到手牌。
@@ -348,56 +339,6 @@ for (const playerCount of [2, 3]) {
     stepOld(oldState, seat, 'activate', { cardUid: picked.u });
     current = stepNew(current, seat, { type: 'activate', cardUid: picked.u });
     compare(`activate ${playerCount} 人 seat=${seat} card=${picked.i}`, oldState, current);
-  }
-
-  // ---------------- 4b. 扩展激活（pay_energy_reward：弃能量换奖励） ----------------
-  if (EXT_MODE) {
-    const seat = 0;
-    const picked = current.deck.find((ref) => {
-      const def = cardDef(ref.i);
-      return def?.effect?.trigger === 'activation'
-        && (def.effect.typeKey ?? def.effect.type) === 'pay_energy_reward'
-        && (def.effect.crystals ?? 0) > 0
-        && !def.effect.energy
-        && !def.effect.draw;
-    });
-    if (picked) {
-      const oldCard = oldState.deck.find((card) => card.uid === picked.u);
-      if (oldCard) {
-        for (const side of [oldState, current]) {
-          const player = side.players[seat];
-          player.energies = { water: 9, air: 9, fire: 9, earth: 9 };
-          player.activatedThisTurn = [];
-          side.deck = side.deck.filter((card) => (card.uid ?? card.u) !== picked.u);
-          side.turnOwner = seat;
-        }
-        oldState.players[seat].played.push(oldCard);
-        current = {
-          ...current,
-          deck: current.deck.filter((card) => card.u !== picked.u),
-          turnOwner: seat,
-          players: current.players.map((p) =>
-            p.seat === seat
-              ? { ...p, played: [...p.played, picked], activatedThisTurn: [] }
-              : p,
-          ),
-        };
-        stepOld(oldState, seat, 'activate', { cardUid: picked.u });
-        current = stepNew(current, seat, { type: 'activate', cardUid: picked.u });
-        // 旧引擎逐点询问元素（kind 'element'），新引擎一次问数量（element_alloc）。
-        let guardChoice = 0;
-        while (oldState.pendingChoice && guardChoice < 4) {
-          guardChoice += 1;
-          stepOld(oldState, seat, 'resolve-choice', { choice: 'water' });
-        }
-        const cost = Number(cardDef(picked.i)?.effect?.cost ?? 1);
-        current = stepNew(current, seat, {
-          type: 'resolve-choice',
-          choice: { water: cost, air: 0, fire: 0, earth: 0 },
-        });
-        compare(`ext activate ${playerCount} 人 card=${picked.i}`, oldState, current);
-      }
-    }
   }
 
   // ---------------- 4b2. 基础激活 · 诅咒圣物控制权转移 ----------------
@@ -868,6 +809,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-  `OK L1 状态级差分一致：${checks} 个检查点（轮抽/组牌/召唤/转换/激活/能量重分配/特殊计分/控制权转移${EXT_MODE ? '，含扩展包' : ''}），召唤卡 ${allSummonedIds.join(',')}`,
+  `OK L1 状态级差分一致：${checks} 个检查点（轮抽/组牌/召唤/转换/激活/能量重分配/特殊计分/控制权转移），召唤卡 ${allSummonedIds.join(',')}`,
 );
 }

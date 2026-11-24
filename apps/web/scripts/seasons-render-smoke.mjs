@@ -133,7 +133,7 @@ function makeView(state, seat) {
     hostId: 'p0',
     minPlayers: 2,
     maxPlayers: 4,
-    options: { extensions: ['base'] },
+    options: {},
     you: { userId: seat === null ? 'p0' : `p${seat}`, seat, spectator: seat === null },
     currentSeat: seasons.turn(state),
     winner: seasons.winner(state),
@@ -194,7 +194,7 @@ try {
 
   for (let game = 0; game < GAMES; game += 1) {
     const playerCount = game === 0 ? 2 : 4;
-    let state = seasons.setup(playerCount, { extensions: ['base', 'ext1', 'ext2'] }, makeRng(50 + game));
+    let state = seasons.setup(playerCount, {}, makeRng(50 + game));
     let guard = 0;
     renderState(state, `game=${game} 开局`);
     while (state.phase !== 'ended' && guard++ < 20000) {
@@ -267,7 +267,7 @@ try {
   // 合成各类 pendingChoice，直接渲染 ChoiceModal，覆盖真实对局里不一定触发的分支。
   const choiceMod = await server.ssrLoadModule('/src/games/seasons/ChoiceModal.tsx');
   const ChoiceModal = choiceMod.ChoiceModal;
-  const modalState = seasons.setup(2, { extensions: ['base'] }, makeRng(9));
+  const modalState = seasons.setup(2, {}, makeRng(9));
   const modalView = makeView(modalState, 0);
   const cardPool = modalState.players[0].hand.slice(0, 3);
   const synthetic = [

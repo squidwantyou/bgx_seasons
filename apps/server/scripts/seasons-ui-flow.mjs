@@ -8,7 +8,7 @@
  */
 import { seasons } from '../dist/games/seasons/engine.js';
 
-const opts = { extensions: ['base'] };
+const opts = {};
 function rng(seed) {
   let state = seed;
   const next = () => {

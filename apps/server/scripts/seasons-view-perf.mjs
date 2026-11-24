@@ -23,7 +23,7 @@ const apply = (s, seat, action) => {
   if (!r.ok) throw new Error(`${action.type}: ${r.code}`);
   return r.state;
 };
-let state = seasons.setup(2, { extensions: ['base'] }, makeRng(99));
+let state = seasons.setup(2, {}, makeRng(99));
 const samples = [];
 let guard = 0;
 while (state.phase !== 'ended' && guard++ < 20000) {

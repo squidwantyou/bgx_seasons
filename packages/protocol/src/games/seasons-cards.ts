@@ -471,8 +471,8 @@ export const BASE_CARDS: readonly SeasonsCardDef[] = [
     cost: { water: 0, air: 0, fire: 0, earth: 2, crystal: 0 },
     points: -10,
     effect: {"trigger": "on_summon", "type": "cursed_treatise", "typeKey": "cursed_treatise", "triggers": ["on_summon", "on_sacrifice"]},
-    desc: "召唤时得 2 能量、水晶+10；被牺牲时丢弃储备区所有元素能量；终局 -10 声望",
-    descEn: "When summoned: +2 energy, +10 crystals. When sacrificed: discard all energy from your reserve. -10 prestige at game end.",
+    desc: "召唤时得 2 能量、水晶+10、召唤等级+1；被牺牲时丢弃储备区所有元素能量；终局 -10 声望",
+    descEn: "When summoned: +2 energy, +10 crystals, +1 summoning gauge. When sacrificed: discard all energy from your reserve. -10 prestige at game end.",
   },
   {
     id: 43,

@@ -44,7 +44,7 @@
 
 | 目录 | 文件数 | 说明 |
 |---|---:|---|
-| `apps/web/src/assets/seasons/cards` | 51 | 卡图 1–90（扩展卡缺图，前端按名称兜底） |
+| `apps/web/src/assets/seasons/cards` | 51 | 卡图 1–50 + 卡背 |
 | `apps/web/src/assets/seasons/dice` | 120 | 4 季 × 5 颗 × 6 面 |
 | `apps/web/src/assets/seasons/elements` | 4 | 水/风/火/土 元素图标 |
 

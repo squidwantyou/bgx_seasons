@@ -18,7 +18,7 @@ import {
   type SeasonsSeasonView,
 } from '@bgx/protocol/games/seasons';
 import type { GameEngine, ReduceResult } from '../types.js';
-import { BASE_CARDS, CARD_BY_ID, cardsForExtensions } from './cards/base.js';
+import { BASE_CARDS, CARD_BY_ID, SEASONS_CARDS } from './cards/base.js';
 import { validateCardPool } from './cards/support.js';
 import { cardById } from './cards/registry.js';
 import { randInt } from './rules/random.js';
@@ -223,7 +223,7 @@ function normalizeReserve(prev: SeasonsState, state: SeasonsState): SeasonsState
   for (const player of state.players) {
     const before = prev.players.find((item) => item.seat === player.seat);
     if (!before || player.maxEnergy >= before.maxEnergy) continue;
-    const overflow = reserveTotal(player) - player.maxEnergy;
+    const overflow = energySum(player.energies) - player.maxEnergy;
     if (overflow <= 0) continue;
     const queued =
       (next.pendingChoice?.kind === 'energy_discard' &&
@@ -232,9 +232,7 @@ function normalizeReserve(prev: SeasonsState, state: SeasonsState): SeasonsState
         (choice) => choice.kind === 'energy_discard' && choice.choosingSeat === player.seat,
       );
     if (queued) continue;
-    const available = Object.fromEntries(
-      ELEMENTS.map((element) => [element, reserveElementCount(player, element)]),
-    ) as Record<Element, number>;
+    const available = { ...player.energies };
     next = queueChoice(next, {
       kind: 'energy_discard',
       key: 'energy_discard',
@@ -358,7 +356,7 @@ function dieViews(state: SeasonsState, season: SeasonsSeasonView | null): Season
 /* setup                                                               */
 /* ------------------------------------------------------------------ */
 
-/** 组池：自定义 id 列表优先，否则按扩展包推导。 */
+/** 组池：自定义 id 列表优先，否则使用标准基础卡池。 */
 function poolCards(options: SeasonsOptions): readonly SeasonsCardDef[] {
   if (options.customDeck && options.customDeck.trim().length > 0) {
     const ids = [
@@ -381,7 +379,7 @@ function poolCards(options: SeasonsOptions): readonly SeasonsCardDef[] {
     }
     return cards;
   }
-  return cardsForExtensions(options.extensions);
+  return SEASONS_CARDS;
 }
 
 /** 开局前校验卡池：id 唯一、数值合法、效果 key 都已登记。 */
@@ -842,19 +840,6 @@ function draftDice(
 
 /** 召唤一张手牌：校验召唤等级/费用，扣能量与水晶，进入场上。 */
 /** 召唤时的被动能力：春之杖（水晶）与对手的奥术水蛭。 */
-/** 已接的扩展包常驻效果（召唤放行白名单）。 */
-const EXT_PERMANENT_IMPLEMENTED = new Set([
-  'max_energy_plus',
-  'cost_reduction',
-  'turn_condition_reward',
-  'turn_flat_reward',
-  'season_opponent_tax',
-  'season_draw',
-  'on_season_change_energy',
-  'fates_spire',
-  'opponent_action_reward',
-]);
-
 function applyPassiveSummonEffects(state: SeasonsState, seat: number): SeasonsState {
   let next = state;
   const me = state.players[seat];
@@ -1131,22 +1116,6 @@ function summon(
       'effect_not_implemented',
       `「${def.nameZh}」的召唤效果需要选择，尚未实现（T2.2b-2）`,
     );
-  }
-
-  // 扩展包：常驻 / 计分 / 骰面改变类效果尚未移植的，先拒绝召唤，
-  // 避免卡牌进场后静默不生效、把对局结果算错（T4.2b 逐步放开）。
-  if (def.extension && def.extension !== 'base') {
-    const trigger = def.effect?.trigger;
-    const key = def.effect ? (def.effect.typeKey ?? def.effect.type) : '';
-    if (
-      (trigger === 'permanent' || trigger === 'score' || trigger === 'dice_change') &&
-      !EXT_PERMANENT_IMPLEMENTED.has(key)
-    ) {
-      return fail(
-        'effect_not_implemented',
-        `「${def.nameZh}」的常驻效果尚未实现（T4.2b）`,
-      );
-    }
   }
 
   const playedCard: CardInstance = { i: card.i, u: card.u };
@@ -1547,24 +1516,41 @@ function resolveCardList(
   const keptSet = new Set(kept);
   const gained = cards.filter((card) => keptSet.has(card.u));
   const dropped = cards.filter((card) => !keptSet.has(card.u));
-  const distribute = pending.options.distribute === true;
+  const distribute = pending.options.distribute === true || pending.options.distribute === 'choose';
   const opponents = state.players.filter((player) => player.seat !== seat);
-  const handed = new Map<number, CardRef[]>();
-  if (distribute && opponents.length > 0 && dropped.length > 0) {
-    dropped.forEach((card, index) => {
-      const target = opponents[index % opponents.length]!;
-      const list = handed.get(target.seat) ?? [];
-      list.push(card);
-      handed.set(target.seat, list);
-    });
+  if (distribute && dropped.length > 0 && opponents.length > 0) {
+    // 娜莉亚：由召唤者逐张指定每张牌交给哪位对手（每位对手各 1 张）。
+    const targets = opponents.map((player) => player.seat);
+    let queued: SeasonsState = {
+      ...state,
+      players: state.players.map((player) =>
+        player.seat === seat ? { ...player, hand: [...player.hand, ...gained] } : player,
+      ),
+      pendingCards: dropped,
+      pendingChoice: null,
+      log: pushLog(
+        state.log,
+        'choice',
+        `${seatName(seat)} 保留 1 张，开始分配其余 ${dropped.length} 张`,
+      ),
+    };
+    const first = targets[0];
+    if (first !== undefined) {
+      queued = queueChoice(queued, {
+        kind: 'card_pick',
+        key: 'naria_distribute',
+        choosingSeat: seat,
+        options: {
+          purpose: 'distribute',
+          targets,
+          title: `选择交给 ${seatName(first)} 的牌`,
+        },
+      });
+    }
+    return { ok: true, state: queued, events: [] };
   }
   const players = state.players.map((player) =>
-    player.seat === seat
-      ? { ...player, hand: [...player.hand, ...gained] }
-      : {
-          ...player,
-          hand: [...player.hand, ...(handed.get(player.seat) ?? [])],
-        },
+    player.seat === seat ? { ...player, hand: [...player.hand, ...gained] } : player,
   );
   const names = gained.map((card) => cardById(card.i)?.nameZh ?? `#${card.i}`);
   return {
@@ -1572,7 +1558,7 @@ function resolveCardList(
     state: {
       ...state,
       players,
-      discard: distribute ? state.discard : [...state.discard, ...dropped],
+      discard: [...state.discard, ...dropped],
       pendingChoice: null,
       pendingCards: null,
       log: pushLog(
@@ -1832,6 +1818,54 @@ function resolveCardPick(
   if (pending.options.purpose === 'discard') {
     return resolveHandDiscard(state, seat, choice);
   }
+  if (pending.options.purpose === 'distribute') {
+    const remaining = state.pendingCards ?? [];
+    if (remaining.length === 0) return fail('no_pending_choice', '当前没有待分配的卡牌');
+    const targets = Array.isArray(pending.options.targets)
+      ? (pending.options.targets as number[])
+      : [];
+    const target = targets[0];
+    if (target === undefined) return fail('invalid_choice', '缺少分配目标');
+    const rawUid =
+      typeof choice === 'number'
+        ? choice
+        : choice && typeof choice === 'object' && 'uid' in choice
+          ? (choice as { uid?: unknown }).uid
+          : Array.isArray(choice)
+            ? choice[0]
+            : undefined;
+    const uid = typeof rawUid === 'number' ? rawUid : NaN;
+    const picked = remaining.find((card) => card.u === uid);
+    if (!picked) return fail('invalid_choice', '无效的卡牌');
+    const rest = remaining.filter((card) => card.u !== uid);
+    let next: SeasonsState = {
+      ...state,
+      players: state.players.map((player) =>
+        player.seat === target ? { ...player, hand: [...player.hand, picked] } : player,
+      ),
+      pendingCards: rest.length > 0 ? rest : null,
+      pendingChoice: null,
+      log: pushLog(
+        state.log,
+        'choice',
+        `${seatName(seat)} 把「${cardById(picked.i)?.nameZh ?? picked.i}」交给 ${seatName(target)}`,
+      ),
+    };
+    const nextTarget = targets[1];
+    if (nextTarget !== undefined && rest.length > 0) {
+      next = queueChoice(next, {
+        kind: 'card_pick',
+        key: 'naria_distribute',
+        choosingSeat: seat,
+        options: {
+          purpose: 'distribute',
+          targets: targets.slice(1),
+          title: `选择交给 ${seatName(nextTarget)} 的牌`,
+        },
+      });
+    }
+    return { ok: true, state: next, events: [] };
+  }
   const cards = state.pendingCards;
   if (!cards) return fail('no_pending_choice', '当前没有待选择的卡牌');
   const raw =
@@ -1893,6 +1927,46 @@ function resolveBranch(
     typeof pending.options.actId === 'string'
       ? pending.options.actId
       : String(pending.options.cardUid ?? '');
+
+  if (pending.key === 'vampiric_crown') {
+    const top = pending.options.card as CardRef | undefined;
+    if (!top) return fail('invalid_choice', '缺少牌堆顶信息');
+    if (id !== 'draw' && id !== 'discard') return fail('invalid_choice', '无效的选项');
+    const points = typeof pending.options.points === 'number' ? pending.options.points : 0;
+    const toHand = id === 'draw';
+    let next: SeasonsState = {
+      ...state,
+      deck: state.deck.filter((card) => card.u !== top.u),
+      pendingChoice: null,
+      discard: toHand ? state.discard : [...state.discard, top],
+      players: toHand
+        ? state.players.map((player) =>
+            player.seat === seat ? { ...player, hand: [...player.hand, top] } : player,
+          )
+        : state.players,
+      log: pushLog(
+        state.log,
+        'effect',
+        `${seatName(seat)} 吸血鬼王冠：${toHand ? '抽入手牌' : '弃掉'}「${
+          cardById(top.i)?.nameZh ?? top.i
+        }」`,
+      ),
+    };
+    if (points > 0) {
+      next = queueChoice(next, {
+        kind: 'element_alloc',
+        key: 'vampiric_crown_energy',
+        choosingSeat: seat,
+        options: {
+          title: `吸血鬼王冠：选择获得 ${points} 个能量`,
+          amount: points,
+          target: 'reserve',
+          label: '获得',
+        },
+      });
+    }
+    return { ok: true, state: next, events: [] };
+  }
 
   if (pending.key === 'die_of_malice') {
     const player = state.players[seat];
@@ -2265,21 +2339,11 @@ function transmute(
   if (!me) return fail('bad_seat', '座位不存在');
   if (!me.canTransmute) return fail('no_transmute', '本回合没有转换能力');
 
-  // 先扣储备区，再扣场上卡牌 stored（流水护符等）。
-  let energies = me.energies;
-  let played = me.played;
-  if (energies[element] > 0) {
-    energies = { ...energies, [element]: energies[element] - 1 };
-  } else {
-    const index = played.findIndex((card) => (card.stored?.[element] ?? 0) > 0);
-    if (index < 0) return fail('energy_low', `没有可用的${ELEMENT_NAME_ZH[element]}能量`);
-    played = played.map((card, i) => {
-      if (i !== index) return card;
-      const stored: Partial<Record<Element, number>> = { ...(card.stored ?? {}) };
-      stored[element] = (stored[element] ?? 0) - 1;
-      return { ...card, stored };
-    });
-  }
+  // 储备区与卡上能量（流水护符等）都可用于转换；贪吃锅的封印能量除外。
+  const afterPay = takeElementEnergy(me, element, 1);
+  if (!afterPay) return fail('energy_low', `没有可用的${ELEMENT_NAME_ZH[element]}能量`);
+  const energies = afterPay.energies;
+  const played = afterPay.played;
 
   let bonus = 0;
   for (const card of played) {
@@ -2388,7 +2452,7 @@ function reserveElementCount(player: SeasonsPlayerState, element: Element): numb
   for (const card of player.played) {
     const def = cardById(card.i);
     if (!def || !card.stored) continue;
-    if (abilitiesOf(def, 'reserve_slot').length === 0) continue;
+    if (abilitiesOf(def, 'sealed_energy').length > 0) continue;
     total += card.stored[element] ?? 0;
   }
   return total;
@@ -2399,7 +2463,7 @@ function reserveTotal(player: SeasonsPlayerState): number {
   for (const card of player.played) {
     const def = cardById(card.i);
     if (!def || !card.stored) continue;
-    if (abilitiesOf(def, 'reserve_slot').length === 0) continue;
+    if (abilitiesOf(def, 'sealed_energy').length > 0) continue;
     total += Object.values(card.stored).reduce<number>((sum, value) => sum + (value ?? 0), 0);
   }
   return total;
@@ -2964,7 +3028,7 @@ function takeElementEnergy(
   const played = player.played.map((card) => {
     if (left === 0) return card;
     const cardDef = cardById(card.i);
-    if (!cardDef || abilitiesOf(cardDef, 'reserve_slot').length === 0) return card;
+    if (!cardDef || abilitiesOf(cardDef, 'sealed_energy').length > 0) return card;
     const have = card.stored?.[element] ?? 0;
     if (have === 0) return card;
     const take = Math.min(have, left);
@@ -3224,19 +3288,48 @@ function markActivated(
 /** 扩展包「对手激活时」奖励（小仙灵 / 命运守望者）：给持有者水晶或抽牌。 */
 function applyOpponentActivateEffects(state: SeasonsState, seat: number): SeasonsState {
   const draws: number[] = [];
+  let stolenTotal = 0;
   const players = state.players.map((player) => {
     if (player.seat === seat) return player;
     let crystals = player.crystals;
     for (const card of player.played) {
       const effect = cardById(card.i)?.effect;
-      if (!effect || (effect.typeKey ?? effect.type) !== 'opponent_action_reward') continue;
+      if (!effect) continue;
+      const key = effect.typeKey ?? effect.type;
+      if (key === 'thieving_fairies') {
+        // 偷窃妖精：对手激活时前进 2 格（1 来自其水晶，1 额外）；对方没水晶时只拿额外 1。
+        const have = (state.players[seat]?.crystals ?? 0) - stolenTotal;
+        if (have > 0) {
+          stolenTotal += 1;
+          crystals += 2;
+        } else {
+          crystals += 1;
+        }
+        continue;
+      }
+      if (key !== 'opponent_action_reward') continue;
       if (effect.triggerKind && effect.triggerKind !== 'opponent_activate') continue;
       if (effect.crystals) crystals += effect.crystals;
       if (effect.draw) draws.push(player.seat);
     }
     return crystals === player.crystals ? player : { ...player, crystals };
   });
+  if (stolenTotal > 0) {
+    const activator = players.find((player) => player.seat === seat);
+    if (activator) {
+      players[players.indexOf(activator)] = {
+        ...activator,
+        crystals: activator.crystals - stolenTotal,
+      };
+    }
+  }
   let next: SeasonsState = { ...state, players };
+  if (stolenTotal > 0) {
+    next = {
+      ...next,
+      log: pushLog(next.log, 'effect', `偷窃妖精：对手激活，水晶 +${stolenTotal + 1}`),
+    };
+  }
   if (draws.length > 0) {
     next = { ...next, log: pushLog(next.log, 'effect', '对手激活奖励：结算') };
   }
@@ -3856,7 +3949,13 @@ export const seasons: GameEngine<
                         title: state.pendingChoice.options.title,
                         amount: state.pendingChoice.options.amount,
                       }
-                    : state.pendingChoice.options,
+                    : state.pendingChoice.kind === 'branch' &&
+                        state.pendingChoice.key === 'vampiric_crown'
+                      ? {
+                          title: state.pendingChoice.options.title,
+                          branches: state.pendingChoice.options.branches,
+                        }
+                      : state.pendingChoice.options,
             }
         : null,
       pendingQueueCount: state.pendingQueue.length,

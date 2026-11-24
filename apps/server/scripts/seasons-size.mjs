@@ -16,7 +16,7 @@ function rng(seed) {
 }
 const rngSource = rng(20261121);
 const ctx = { now: 0, rng: rngSource };
-let state = seasons.setup(2, { extensions: ['base'] }, rngSource);
+let state = seasons.setup(2, {}, rngSource);
 const apply = (s, seat, action) => {
   const r = seasons.reduce(s, seat, action, ctx);
   if (!r.ok) {
