@@ -1403,3 +1403,15 @@
 .ss-log-expand:focus-visible { outline: 2px solid var(--ss-accent, #e8c26a); outline-offset: 2px; }
 .ss-log-full { max-height: 280px; overflow-y: auto; }
 .ss-log-full li:last-child { animation: ss-log-in 900ms ease-out; }
+
+/* F9.1 观战视图 */
+.ss-spectator-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(95, 176, 230, 0.5);
+  background: rgba(95, 176, 230, 0.12);
+  color: #9cc8e6;
+}
+.ss-spectator { display: grid; gap: 8px; }
+.ss-spectator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }

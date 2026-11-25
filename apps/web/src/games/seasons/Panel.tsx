@@ -1019,6 +1019,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
         <span key={game.phase} className={`ss-phase ss-phase-${game.phase} ss-phase-pop`}>
           {PHASE_NAME[game.phase] ?? game.phase}
         </span>
+        {!me && <span className="ss-spectator-chip">观战</span>}
         <span className="ss-meta">
           第 {game.year} 年 · {game.season?.name ?? '筹备中'} · 第 {game.month + 1} 月
         </span>
@@ -1094,7 +1095,26 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
             onInspect={setInspecting}
           />
         ) : (
-          <p className="ss-muted">观战中</p>
+          <div className="ss-spectator">
+            <p className="ss-muted">观战模式 · 你看不到任何人的手牌</p>
+            <div className="ss-spectator-grid">
+              {game.players.map((player) => (
+                <PlayerBlock
+                  key={player.seat}
+                  player={player}
+                  label={`座位 ${player.seat + 1}`}
+                  active={
+                    game.phase === 'draft'
+                      ? player.seat === game.currentPicker
+                      : game.turnOwner === player.seat
+                  }
+                  highlightUids={fresh.get(player.seat)}
+                  float={floats.get(player.seat)}
+                  onInspect={setInspecting}
+                />
+              ))}
+            </div>
+          </div>
         )}
         {me && <PlayActions game={game} player={me} canAct={canAct} onSend={send} />}
         {me && <ActionHints game={game} player={me} canAct={canAct} />}

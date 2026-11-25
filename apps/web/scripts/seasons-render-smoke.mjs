@@ -184,6 +184,7 @@ try {
             if (!html.includes(marker)) throw new Error(`Panel 输出缺少关键入口：${marker}`);
           }
         }
+        if (seat === null && !html.includes('ss-spectator')) throw new Error('观战视图缺少 ss-spectator');
         if (seat === 0 && state.phase !== 'ended' && !state.pendingChoice && view.myTurn) {
           if (!html.includes('ss-hints')) throw new Error('行动提示（ss-hints）缺失');
         }
