@@ -2051,14 +2051,36 @@ describe('seasons activate (batch 2)', () => {
     expect(done.state.players[0]?.activatedThisTurn.some((k) => k.startsWith('7000'))).toBe(true);
   });
 
-  it('死灵匕首：牺牲后获得 4 个任意能量', () => {
-    const state = activateReady(['死灵匕首']);
+  it('死灵匕首：弃手牌随从后获得 4 个任意能量', () => {
+    const familiar = BASE_CARDS.find(
+      (card) => card.type === 'familiar' && card.effect?.trigger === 'permanent',
+    )!;
+    const base = activateReady(['死灵匕首']);
+    const state: SeasonsState = {
+      ...base,
+      players: base.players.map((player, seat) =>
+        seat === 0 ? { ...player, hand: [{ i: familiar.id, u: 7100 }] } : player,
+      ),
+    };
     const res = seasons.reduce(state, 0, { type: 'activate', cardUid: 7000 }, ctx);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.state.pendingChoice?.options.amount).toBe(4);
-    const done = seasons.reduce(
+    expect(res.state.pendingChoice?.kind).toBe('sacrifice_cards');
+    expect(res.state.pendingChoice?.options.source).toBe('hand_or_play');
+    const picked = seasons.reduce(
       res.state,
+      0,
+      { type: 'resolve-choice', choice: { uid: 7100 } },
+      ctx,
+    );
+    expect(picked.ok).toBe(true);
+    if (!picked.ok) return;
+    expect(picked.state.players[0]?.hand).toHaveLength(0);
+    expect(picked.state.discard.some((card) => card.u === 7100)).toBe(true);
+    expect(picked.state.pendingChoice?.kind).toBe('element_alloc');
+    expect(picked.state.pendingChoice?.options.amount).toBe(4);
+    const done = seasons.reduce(
+      picked.state,
       0,
       { type: 'resolve-choice', choice: { earth: 4 } },
       ctx,
@@ -2066,6 +2088,53 @@ describe('seasons activate (batch 2)', () => {
     expect(done.ok).toBe(true);
     if (!done.ok) return;
     expect(done.state.players[0]?.energies.earth).toBe(9);
+    // 匕首本身留在场上
+    expect(done.state.players[0]?.played.some((card) => card.u === 7000)).toBe(true);
+  });
+
+  it('死灵匕首：牺牲在场随从后获得 4 个任意能量', () => {
+    const familiar = BASE_CARDS.find(
+      (card) => card.type === 'familiar' && card.effect?.trigger === 'permanent',
+    )!;
+    const base = activateReady(['死灵匕首']);
+    const state: SeasonsState = {
+      ...base,
+      players: base.players.map((player, seat) =>
+        seat === 0
+          ? { ...player, played: [...player.played, { i: familiar.id, u: 7101 }] }
+          : player,
+      ),
+    };
+    const res = seasons.reduce(state, 0, { type: 'activate', cardUid: 7000 }, ctx);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const picked = seasons.reduce(
+      res.state,
+      0,
+      { type: 'resolve-choice', choice: { uid: 7101 } },
+      ctx,
+    );
+    expect(picked.ok).toBe(true);
+    if (!picked.ok) return;
+    expect(picked.state.players[0]?.played.some((card) => card.u === 7101)).toBe(false);
+    expect(picked.state.discard.some((card) => card.u === 7101)).toBe(true);
+    const done = seasons.reduce(
+      picked.state,
+      0,
+      { type: 'resolve-choice', choice: { earth: 4 } },
+      ctx,
+    );
+    expect(done.ok).toBe(true);
+    if (!done.ok) return;
+    expect(done.state.players[0]?.energies.earth).toBe(9);
+  });
+
+  it('死灵匕首：没有随从可弃/牺牲时激活被拒绝', () => {
+    const state = activateReady(['死灵匕首']);
+    const res = seasons.reduce(state, 0, { type: 'activate', cardUid: 7000 }, ctx);
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.code).toBe('invalid_choice');
   });
 
   it('生命药水：可一次选择多种元素，每种全部按 4 水晶转换', () => {
@@ -2194,6 +2263,8 @@ describe('seasons end-of-turn and season effects', () => {
     const res2 = seasons.reduce(poor, 0, { type: 'end-turn' }, ctx);
     expect(res2.ok).toBe(true);
     if (!res2.ok) return;
+    // 有对手付不起：直接牺牲，不收其他人的水晶（自己仍是 10）。
+    expect(res2.state.players[0]?.crystals).toBe(10);
     expect(res2.state.players[0]?.played).toHaveLength(0);
     expect(res2.state.discard.some((card) => card.u === 7000)).toBe(true);
   });
