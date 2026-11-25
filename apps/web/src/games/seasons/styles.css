@@ -613,3 +613,114 @@
 }
 
 .ss-pile-empty { opacity: 0.45; }
+
+/* ---------- F2.1 三段式牌桌 ---------- */
+.ss-board {
+  --ss-band-gap: 14px;
+}
+
+.ss-band {
+  display: grid;
+  gap: 10px;
+}
+
+.ss-band-top { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(6px); }
+
+.ss-band-mid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ss-opponents {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+}
+
+.ss-band-bottom {
+  padding: 12px;
+  border-radius: var(--ss-radius-lg);
+  border: 1px solid var(--ss-line);
+  background: linear-gradient(180deg, rgba(232, 194, 106, 0.05), transparent 40%), var(--ss-surface);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.ss-player {
+  position: relative;
+  padding: 10px;
+  border-radius: var(--ss-radius-md);
+  border: 1px solid var(--ss-line);
+  background: var(--ss-surface);
+}
+
+.ss-player-you {
+  border-color: rgba(232, 194, 106, 0.55);
+  background: linear-gradient(180deg, rgba(232, 194, 106, 0.08), transparent 60%), var(--ss-surface);
+}
+
+.ss-player-active {
+  border-color: var(--ss-accent);
+  box-shadow: 0 0 0 2px var(--ss-accent-soft), 0 0 16px rgba(232, 194, 106, 0.18);
+}
+
+.ss-active-tag {
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ss-accent);
+  color: #101a24;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .ss-opponents { grid-template-columns: minmax(0, 1fr); }
+  .ss-band-bottom { padding: 8px; }
+}
+
+/* ---------- F2.2/F2.3 玩家身份色与紧凑对手区 ---------- */
+.ss-player {
+  border-left: 4px solid var(--ss-seat, var(--ss-line));
+}
+
+.ss-seat-tag {
+  background: var(--ss-seat, var(--ss-surface-2));
+  color: #101a24;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-weight: 700;
+}
+
+.ss-pile {
+  color: var(--ss-pile-accent, var(--ss-muted));
+}
+
+.ss-pile-back {
+  border-color: var(--ss-pile-accent, var(--ss-line-strong));
+}
+
+.ss-opponents .ss-player {
+  border-radius: var(--ss-radius-md);
+}
+
+.ss-opponents .ss-player-head {
+  gap: 6px;
+}
+
+.ss-opponents .ss-played {
+  flex-wrap: wrap;
+}
+
+.ss-player-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ss-player-head strong {
+  color: var(--ss-seat, var(--ss-text));
+}
