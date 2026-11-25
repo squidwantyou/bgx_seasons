@@ -1010,3 +1010,64 @@
   border-color: var(--ss-danger);
   color: #fff;
 }
+
+/* ---------- F4.5 组牌体验 ---------- */
+.ss-organize-plan {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ss-organize-year {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: var(--ss-radius-md);
+  border: 1px dashed var(--ss-line);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.ss-organize-year-current {
+  border-style: solid;
+  border-color: var(--ss-accent);
+  background: var(--ss-accent-soft);
+}
+
+.ss-organize-year-label { font-size: 12px; font-weight: 700; }
+
+.ss-organize-year-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 24px;
+}
+
+.ss-organize-bar {
+  position: sticky;
+  bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: var(--ss-radius-md);
+  border: 1px solid var(--ss-line-strong);
+  background: var(--ss-surface-2);
+}
+
+.ss-organize-picked {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.ss-organize-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+@media (max-width: 720px) {
+  .ss-organize-actions { width: 100%; }
+  .ss-organize-actions .ss-button { flex: 1 1 40%; }
+}

@@ -414,35 +414,69 @@ function MyZone({
     const year1 = player.organizeYear1 ?? [];
     const year2 = player.organizeYear2 ?? [];
     const remaining = player.drafted.filter((card) => !year1.includes(card.u) && !year2.includes(card.u));
+    const year1Cards = player.drafted.filter((card) => year1.includes(card.u));
+    const year2Cards = player.drafted.filter((card) => year2.includes(card.u));
+    const year3Cards = remaining.filter((card) => !picked.includes(card.u));
+    const pickedCards = picked
+      .map((uid) => player.drafted?.find((card) => card.u === uid))
+      .filter((card): card is SeasonsCardView => Boolean(card));
     const fillingYear = year1.length === 0 ? 1 : year2.length === 0 ? 2 : 3;
-    const toggle = (uid: number) => {
-      setPicked((current) => {
-        if (current.includes(uid)) return current.filter((item) => item !== uid);
-        if (current.length >= 3) return current;
-        const next = [...current, uid];
-        if (next.length === 3) {
-          onSend({ type: 'organize', cardUids: [next[0]!, next[1]!, next[2]!] });
-          return [];
-        }
-        return next;
-      });
+    const toggle = (uid: number) =>
+      setPicked((current) =>
+        current.includes(uid)
+          ? current.filter((item) => item !== uid)
+          : current.length >= 3
+            ? current
+            : [...current, uid],
+      );
+    const submitYear = () => {
+      if (picked.length !== 3) return;
+      onSend({ type: 'organize', cardUids: [picked[0]!, picked[1]!, picked[2]!] });
+      setPicked([]);
     };
+    const yearRows = [
+      { key: 'y1', label: '第 1 年', cards: year1Cards, planned: fillingYear === 1 },
+      { key: 'y2', label: '第 2 年', cards: year2Cards, planned: fillingYear === 2 },
+      { key: 'y3', label: '第 3 年（自动）', cards: year3Cards, planned: fillingYear === 3 },
+    ];
     return (
-      <section className="ss-hand">
+      <section className="ss-hand ss-organize">
         <h3>
-          组牌 · 第 {fillingYear} 年（选 3 张） · 已放 {year1.length + year2.length} / 9
+          组牌 · 当前第 {fillingYear} 年 · 已放 {year1.length + year2.length} / 9
+          {player.organizeDone ? ' · 已完成' : ''}
         </h3>
+        <div className="ss-organize-plan">
+          {yearRows.map((row) => (
+            <div
+              className={`ss-organize-year${row.planned ? ' ss-organize-year-current' : ''}`}
+              key={row.key}
+            >
+              <span className="ss-organize-year-label">
+                {row.label}
+                <span className="ss-muted"> · {row.cards.length} 张</span>
+              </span>
+              <div className="ss-organize-year-cards">
+                {row.cards.length === 0 ? (
+                  <span className="ss-muted">空</span>
+                ) : (
+                  row.cards.map((card) => <CardMini key={card.u} card={card} />)
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
         <div className="ss-hand-cards">
           {player.drafted.map((card) => {
             const belongs = year1.includes(card.u) ? '第 1 年' : year2.includes(card.u) ? '第 2 年' : undefined;
+            const isPicked = picked.includes(card.u);
             return (
               <CardTile
                 key={card.u}
                 card={card}
-                selected={picked.includes(card.u)}
+                selected={isPicked}
                 tag={belongs}
                 disabled={Boolean(belongs)}
-                hint={belongs ?? (canAct ? '点击选中' : undefined)}
+                hint={belongs ?? (isPicked ? '已选中' : canAct ? '点击选中' : undefined)}
                 onClick={
                   canAct && !player.organizeDone && !belongs ? () => toggle(card.u) : undefined
                 }
@@ -451,14 +485,45 @@ function MyZone({
           })}
         </div>
         {canAct && !player.organizeDone && (
-          <button
-            type="button"
-            className="ss-button ss-button-ghost"
-            disabled={picked.length === 0}
-            onClick={() => setPicked([])}
-          >
-            清空选择（{picked.length}/3）
-          </button>
+          <div className="ss-organize-bar">
+            <div className="ss-organize-picked">
+              <span className="ss-muted">本次选择 {pickedCards.length} / 3</span>
+              {pickedCards.map((card) => (
+                <CardMini key={card.u} card={card} />
+              ))}
+            </div>
+            <div className="ss-organize-actions">
+              <button
+                type="button"
+                className="ss-button ss-button-ghost"
+                disabled={picked.length === 0}
+                onClick={() => setPicked([])}
+              >
+                清空选择
+              </button>
+              <button
+                type="button"
+                className="ss-button ss-button-ghost"
+                disabled={year1.length + year2.length === 0}
+                onClick={() => {
+                  if (window.confirm('撤回已放好的牌，重新从第 1 年开始组牌？')) {
+                    setPicked([]);
+                    onSend({ type: 'organize-reset' });
+                  }
+                }}
+              >
+                撤回重选
+              </button>
+              <button
+                type="button"
+                className="ss-button ss-button-primary"
+                disabled={picked.length !== 3}
+                onClick={submitYear}
+              >
+                提交第 {fillingYear} 年（3 张）
+              </button>
+            </div>
+          </div>
         )}
       </section>
     );
