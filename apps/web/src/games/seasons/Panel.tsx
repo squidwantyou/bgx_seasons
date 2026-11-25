@@ -19,6 +19,7 @@ import { CardDetail } from './cards/CardDetail';
 import { Glossary } from './Glossary';
 import { Onboarding, markOnboardingDone, onboardingDone } from './Onboarding';
 import { ResultScreen } from './ResultScreen';
+import { LogPanel } from './LogPanel';
 import { CardTile } from './cards/CardTile';
 import './styles.css';
 
@@ -1164,16 +1165,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
         />
       )}
 
-      <section className="ss-log">
-        <h3>对局记录</h3>
-        <ol>
-          {game.log.slice(-8).map((entry, index) => (
-            <li key={`${entry.t}-${index}`} className={`ss-log-${entry.t}`}>
-              {entry.msg}
-            </li>
-          ))}
-        </ol>
-      </section>
+      <LogPanel game={game} />
     </div>
   );
 }
