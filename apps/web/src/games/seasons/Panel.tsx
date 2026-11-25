@@ -18,6 +18,7 @@ import { CardPile } from './cards/CardPile';
 import { CardDetail } from './cards/CardDetail';
 import { Glossary } from './Glossary';
 import { Onboarding, markOnboardingDone, onboardingDone } from './Onboarding';
+import { ResultScreen } from './ResultScreen';
 import { CardTile } from './cards/CardTile';
 import './styles.css';
 
@@ -302,25 +303,7 @@ function PlayerBlock({
   );
 }
 
-function ResultBlock({ game }: { game: SeasonsGameView }) {
-  if (!game.result) return null;
-  return (
-    <section className="ss-result">
-      <h3>终局结算</h3>
-      <ul>
-        {game.result.players.map((score) => (
-          <li key={score.seat} className={score.seat === game.result?.winner ? 'ss-winner' : undefined}>
-            座位 {score.seat + 1}：{score.score} 分
-            <span className="ss-muted">
-              （水晶 {score.crystals} · 卡牌 {score.cardPoints} · 效果 {score.effectPoints} · 手牌 -
-              {score.handPenalty} · 徽章 -{score.badgePenalty}）
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
+
 
 /** F4.2 召唤确认条：选中手牌后先预览费用与剩余储备，再确认提交。 */
 function SummonConfirm({
@@ -1111,7 +1094,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
         {inspecting !== null && (
           <CardDetail cardId={inspecting} onClose={() => setInspecting(null)} />
         )}
-        <ResultBlock game={game} />
+        <ResultScreen game={game} mySeat={me?.seat ?? null} />
       </div>
 
       {me && hasChoice && game.pendingChoice?.choosingSeat === me.seat && (
