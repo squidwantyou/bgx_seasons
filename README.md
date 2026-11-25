@@ -3,7 +3,7 @@
 BGX 平台上的《四季物语 / Seasons》完整实现快照：**规则引擎 + 协议/校验 + React 牌桌 + 素材 + 验证脚本 + 开发文档**。
 
 - 支持 **2–4 人**（2 人局可认输，3–4 人不可）
-- 卡池：基础 50 张（每种 2 张）；扩展包 51–90 已按维护者裁定删除，`ext1`/`ext2` 选项不再存在；可用 `customDeck` 指定任意子集
+- 卡池：标准卡池为基础 50 张（每种 2 张）；预设「五福季节」= 空气/火焰/大地/流水/元素护符各 20 张（共 100 张），用选项 `pool: 'five_fortunes'` 选择；扩展包 51–90 已按维护者裁定删除；`customDeck` 优先级最高，可指定任意子集
 - 轮抽 → 3/3/3 组牌库 → 3 年 × 4 季 × 3 月（36 个月）→ 计分结算
 - 完整选择系统（11 种弹窗）、徽章、能量上限/重分配、特殊计分、卡牌离场规则
 - 素材：175 个 webp（卡图 51 张 + 骰面 120 张 + 元素 4 张），约 1.7 MB
@@ -49,6 +49,7 @@ node apps/server/scripts/oracle-seasons-l1.mjs # L1 状态级差分（确定性�
 node apps/server/scripts/oracle-seasons-l1.mjs --ext
 node apps/server/scripts/seasons-soak.mjs 200 2        # 长跑 + 不变式
 node apps/server/scripts/seasons-soak.mjs 60 4 20      # 4 人 + 随机 20 种卡池
+node apps/server/scripts/seasons-soak.mjs 60 2 five_fortunes  # 五福季节卡池
 node apps/server/scripts/seasons-size.mjs      # state 体积采样（目标 < 15KB）
 node apps/server/scripts/seasons-view-perf.mjs # view 渲染耗时
 node apps/server/scripts/seasons-ui-flow.mjs   # 只用前端动作打完整局

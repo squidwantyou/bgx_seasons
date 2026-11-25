@@ -567,7 +567,19 @@ function actionPhase(seed = 'seasons-test'): SeasonsState {
 }
 
 describe('seasons 卡池框架', () => {
-  it('全部 90 张卡（基础 + 扩展）都通过卡池校验', () => {
+  it('五福季节：5 种护符各 20 张，共 100 张', () => {
+    const state = seasons.setup(2, { pool: 'five_fortunes' }, createRng('five-fortunes'));
+    const all = [...state.players.flatMap((player) => player.draftHand), ...state.deck];
+    expect(all).toHaveLength(100);
+    expect(state.deck).toHaveLength(82);
+    const ids = new Set([1, 2, 3, 4, 31]);
+    for (const card of all) expect(ids.has(card.i)).toBe(true);
+    for (const id of ids) {
+      expect(all.filter((card) => card.i === id)).toHaveLength(20);
+    }
+  });
+
+  it('全部 50 张基础卡都通过卡池校验', () => {
     expect(validateCardPool(SEASONS_CARDS)).toEqual([]);
   });
 
@@ -583,7 +595,7 @@ describe('seasons 卡池框架', () => {
     registerCards([fake]);
     try {
       expect(() =>
-        seasons.setup(2, { extensions: ['base'], customDeck: '1,2,9001' }, createRng('pool-bad')),
+        seasons.setup(2, { customDeck: '1,2,9001' }, createRng('pool-bad')),
       ).toThrow(/卡池校验失败：.*not_a_real_key/);
     } finally {
       unregisterCards([9001]);
@@ -594,7 +606,7 @@ describe('seasons 卡池框架', () => {
     const ids = BASE_CARDS.slice(0, 12).map((def) => def.id);
     const state = seasons.setup(
       2,
-      { extensions: ['base'], customDeck: ids.join(',') },
+      { customDeck: ids.join(',') },
       createRng('pool-small'),
     );
     expect(state.deck.length).toBe(24 - 18);
@@ -611,10 +623,10 @@ describe('seasons 卡池框架', () => {
 
   it('customDeck 里未知 id / 卡池不足会给出明确错误', () => {
     expect(() =>
-      seasons.setup(2, { extensions: ['base'], customDeck: '1,2,9999' }, createRng('pool-missing')),
+      seasons.setup(2, { customDeck: '1,2,9999' }, createRng('pool-missing')),
     ).toThrow(/未知卡牌 id：9999/);
     expect(() =>
-      seasons.setup(2, { extensions: ['base'], customDeck: '1,2' }, createRng('pool-tiny')),
+      seasons.setup(2, { customDeck: '1,2' }, createRng('pool-tiny')),
     ).toThrow(/卡池只有 4 张牌，至少需要 18 张/);
   });
 });

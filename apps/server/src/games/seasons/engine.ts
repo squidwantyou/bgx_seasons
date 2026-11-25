@@ -357,7 +357,14 @@ function dieViews(state: SeasonsState, season: SeasonsSeasonView | null): Season
 /* ------------------------------------------------------------------ */
 
 /** 组池：自定义 id 列表优先，否则使用标准基础卡池。 */
-function poolCards(options: SeasonsOptions): readonly SeasonsCardDef[] {
+/** 卡池条目：一张卡的实例份数（标准池 2 份，五福季节 20 份）。 */
+type PoolEntry = { def: SeasonsCardDef; copies: number };
+
+/** 五福季节：空气 / 火焰 / 大地 / 流水 / 元素护符，每种 20 张。 */
+export const FIVE_FORTUNES_IDS: readonly number[] = [1, 2, 3, 4, 31];
+export const FIVE_FORTUNES_COPIES = 20;
+
+function poolEntries(options: SeasonsOptions): PoolEntry[] {
   if (options.customDeck && options.customDeck.trim().length > 0) {
     const ids = [
       ...new Set(
@@ -367,11 +374,11 @@ function poolCards(options: SeasonsOptions): readonly SeasonsCardDef[] {
           .filter((id) => Number.isInteger(id) && id > 0),
       ),
     ];
-    const cards: SeasonsCardDef[] = [];
+    const cards: PoolEntry[] = [];
     const missing: number[] = [];
     for (const id of ids) {
       const def = cardById(id);
-      if (def) cards.push(def);
+      if (def) cards.push({ def, copies: COPIES_PER_CARD });
       else missing.push(id);
     }
     if (missing.length > 0) {
@@ -379,7 +386,20 @@ function poolCards(options: SeasonsOptions): readonly SeasonsCardDef[] {
     }
     return cards;
   }
-  return SEASONS_CARDS;
+  if (options.pool === 'five_fortunes') {
+    const entries: PoolEntry[] = [];
+    const missing: number[] = [];
+    for (const id of FIVE_FORTUNES_IDS) {
+      const def = cardById(id);
+      if (def) entries.push({ def, copies: FIVE_FORTUNES_COPIES });
+      else missing.push(id);
+    }
+    if (missing.length > 0) {
+      throw new Error(`五福季节卡池缺少卡牌 id：${missing.join(', ')}`);
+    }
+    return entries;
+  }
+  return SEASONS_CARDS.map((def) => ({ def, copies: COPIES_PER_CARD }));
 }
 
 /** 开局前校验卡池：id 唯一、数值合法、效果 key 都已登记。 */
@@ -393,12 +413,12 @@ function assertCardPool(cards: readonly SeasonsCardDef[]): void {
   }
 }
 
-function buildDeck(cards: readonly SeasonsCardDef[], playerCount: number): CardRef[] {
+function buildDeck(entries: readonly PoolEntry[], playerCount: number): CardRef[] {
   const deck: CardRef[] = [];
   let uid = 1;
-  for (const def of cards) {
-    for (let copy = 0; copy < COPIES_PER_CARD; copy++) {
-      deck.push({ i: def.id, u: uid });
+  for (const entry of entries) {
+    for (let copy = 0; copy < entry.copies; copy++) {
+      deck.push({ i: entry.def.id, u: uid });
       uid++;
     }
   }
@@ -420,9 +440,9 @@ function setup(
   const seed = rng.int(0x7fffffff);
   let cursor = 0;
 
-  const cards = poolCards(options);
-  assertCardPool(cards);
-  const deck = buildDeck(cards, playerCount);
+  const entries = poolEntries(options);
+  assertCardPool(entries.map((entry) => entry.def));
+  const deck = buildDeck(entries, playerCount);
   cursor = shuffleWithSeed(deck, seed, cursor);
 
   const players = Array.from({ length: playerCount }, (_, seat) => newPlayer(seat));

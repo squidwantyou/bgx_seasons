@@ -9,10 +9,10 @@
 | 项 | 值 |
 |---|---|
 | 当前阶段 | Phase 5 卡牌框架（用户 11-23 拍板：T3.6b 不装 Playwright、T4.4b 由用户人肉测试；11-24 又裁定删除扩展卡 51–90、只保留基础 50 张，并修正 5 张卡效果） |
-| 当前任务 | T5.1 储备语义统一 ✅；T5.2 卡池校验/注册表 ✅（现只保留基础 50 张，`customDeck` 仍可指定）；T5.4 卡池压力测试 ✅（参数改为 `[局数] [人数] [随机池大小]`）；T5.5 卡效修正 ✅（4/7/12/36/42 按用户裁定、41 偷窃妖精补实现、扩展 51–90 删除；11-25 又按用户确认修正 44 死灵匕首与 39 提图斯）。待做：T5.3 效果处理器注册表。剩余人工项：T4.4b 由用户手测、T3.6b 不装 Playwright、T4.7b 不再重复部署 |
+| 当前任务 | T5.1 储备语义统一 ✅；T5.2 卡池校验/注册表 ✅（现只保留基础 50 张，`customDeck` 仍可指定）；T5.4 卡池压力测试 ✅（参数改为 `[局数] [人数] [随机池大小]`）；T5.5 卡效修正 ✅（4/7/12/36/42 按用户裁定、41 偷窃妖精补实现、扩展 51–90 删除；11-25 又按用户确认修正 44 死灵匕首与 39 提图斯）；T5.6 预设卡池「五福季节」✅（5 种护符 × 20 张）。待做：T5.3 效果处理器注册表。剩余人工项：T4.4b 由用户手测、T3.6b 不装 Playwright、T4.7b 不再重复部署 |
 | 迷你版目标 | 3 个夜间时段（约 6 次运行）产出「2 人可完整打完一局」 |
 | 完整版目标 | 之后约 1 周：基础 50 卡全量 + ext1/ext2 + 打磨 |
-| 最后更新 | 2026-11-25 10:40 |
+| 最后更新 | 2026-11-25 11:20 |
 
 ## 1. 目标与边界
 
@@ -251,6 +251,7 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
 - [x] T5.1 储备语义统一：卡上能量（`reserve_slot`）与普通储备完全等价，可支付召唤/激活/徽章等一切费用；卡牌离场导致上限下降时，若超出上限则弹 `energy_discard` 让玩家选择弃掉哪些能量（`normalizeReserve` + `finish(prev,res)`，`promoteQueued` 会跳过已失效的弃置选择）
 - [x] T5.2 卡池校验与运行时注册：`validateCardPool`（id 重复/名称/分数整数/费用非负/未登记的 effect key）、`registerCards`/`cardById`（内置 50 张之外可运行时登记）、`customDeck` 选项（逗号分隔 id，任意小卡池自动校验），setup 阶段先校验后建牌堆
 - [ ] T5.3 效果处理器注册表：把 `summon` / `activate` / 回合末 / 换季 / 计分 里按 key 分派的 if/switch 抽成 `Record<key, handler>`，新增卡牌只登记数据 + handler，不改引擎主流程
+- [x] T5.6 预设卡池「五福季节」（2026-11-25）：游戏选项新增 `pool`（select：`standard` / `five_fortunes`），五福季节 = 空气护符(1)/火焰护符(2)/大地护符(3)/流水护符(4)/元素护符(31) 各 **20 张**，共 100 张；卡池构建改为 `poolEntries`（每张卡带 `copies`），`customDeck` 优先级最高。soak 第 4 参数也接受 `five_fortunes` 以跑纯护符对局
 - [x] T5.4 卡池压力测试：`seasons-soak.mjs [局数] [人数] [随机池大小]`——第 4 参数给定时从 50 张里随机抽 N 种用 `customDeck` 入池（4 人至少 18 种）；2 人 10/12/20、3 人 14、4 人 20 各若干局全过。顺带修掉「牌堆与弃牌堆都空时抽不到牌、卡_list/card_pick 挂起无候选」的死锁：抽到的牌不足保留数时直接全部保留，空候选直接作废
 
 ## 10. 风险与对策
@@ -552,3 +553,10 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
   - L1：死灵匕首移出 4g（旧引擎实现的是「牺牲本卡」，与卡面不一致；按用户裁定以卡面为准，改由单测覆盖）；L1 稳定 116–119 检查点。
   - 部署（2026-11-25 10:40）：三包 build（内存守卫下 protocol/server/web 均通过），rsync web dist → `/var/www/bgx`、仓库 → `/opt/bgx/app`（排除 .git/data/apps/web/src/dist/bgx_seasons），重装 `bgx.service` 并重启，`/healthz` ok。线上验证：入口 `index-DIcHmn62.js`；`/bgx/api/games` 的 seasons 为 2–4 人、options 只剩 `customDeck`；`/opt/bgx/app` 的 engine.js 含 `hand_or_play`；51 张卡图 webp 可访问。
   - 验证汇总：171 tests；L1 116–119 检查点；soak 2 人 100 局 + 3/4 人各 40 局（随机池）全过；ui-flow、渲染冒烟 1187 次、数据基线 50 卡全部通过。
+
+- **2026-11-25 11:10–11:20** 新增预设卡池「五福季节」（用户需求）。
+  - 用户确认：五张牌 = 空气护符(id 1) / 火焰护符(2) / 大地护符(3) / 流水护符(4) / 元素护符(31)；每种 20 张共 100 张；作为新选项「标准卡池 / 五福季节」二选一。
+  - 实现：`seasons.ts` 新增 `SeasonsPool = 'standard' | 'five_fortunes'` 与 `pool` 选项（默认 `standard`），schema `pool: z.enum([...]).optional()`；引擎把卡池构建改成 `poolEntries(options): {def, copies}[]`（标准 50×2、五福 5×20、customDeck 每种 2），`buildDeck` 按 `copies` 展开。优先级：`customDeck` > `pool` > 标准。
+  - 测试：setup 2 人五福季节 → 100 张、发牌后 deck 82、每 id 恰好 20 张；协议测试覆盖 pool 选项与非法值。**172 tests 全绿**。
+  - 对局验证：soak 支持第 4 参数传 `five_fortunes`，2 人 60 局、3 人 40 局、4 人 40 局全部通过（纯护符牌池也能打完并结算）。
+  - 未部署：按既有约定，等用户明确指令再同步到 BGX 线上。
