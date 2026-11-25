@@ -176,6 +176,11 @@ try {
           }),
         );
         if (!html.includes('ss-board')) throw new Error('Panel 输出缺少 ss-board 根节点');
+        if (seat === 0) {
+          for (const marker of ['术语', 'ss-band-top', 'ss-band-bottom']) {
+            if (!html.includes(marker)) throw new Error(`Panel 输出缺少关键入口：${marker}`);
+          }
+        }
         renders += 1;
       } catch (error) {
         throw new Error(`渲染失败（${where}，座位 ${seat === null ? '观战' : seat}）：${error.message}`);

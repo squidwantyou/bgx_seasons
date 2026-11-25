@@ -56,7 +56,7 @@ export function CardTile({
       onClick={interactive ? onClick : undefined}
     >
       {art ? (
-        <img className="ss-card-tile-art" src={art} alt={name} loading="lazy" draggable={false} />
+        <img className="ss-card-tile-art" src={art} alt={name} loading="lazy" decoding="async" draggable={false} />
       ) : (
         <div className="ss-card-missing">{name}</div>
       )}

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ELEMENTS, type Element } from '@bgx/protocol/games/seasons';
 
 /**
@@ -15,7 +16,7 @@ const ELEMENT_NAME: Record<Element, string> = {
 
 const MAX_VISIBLE = 5;
 
-export function ElementPips({
+export const ElementPips = memo(function ElementPips({
   element,
   count,
   size = 'md',
@@ -45,7 +46,7 @@ export function ElementPips({
       {extra > 0 && <span className="ss-pip-more">+{extra}</span>}
     </span>
   );
-}
+});
 
 /** 四种元素按固定顺序排成一行；用于储备区、骰面奖励、费用摘要。 */
 export function ElementRow({

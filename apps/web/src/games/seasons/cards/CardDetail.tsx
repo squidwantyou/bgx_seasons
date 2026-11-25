@@ -61,7 +61,7 @@ export function CardDetail({ cardId, onClose }: { cardId: number; onClose: () =>
           </button>
         </header>
         <div className="ss-detail-body">
-          <img className="ss-detail-art" src={cardArt(cardId)} alt={def?.nameZh ?? ''} />
+          <img className="ss-detail-art" src={cardArt(cardId)} alt={def?.nameZh ?? ''} decoding="async" />
           <div className="ss-detail-meta">
             <div className="ss-detail-row">
               <span className="ss-muted">{def?.nameEn ?? ''}</span>
