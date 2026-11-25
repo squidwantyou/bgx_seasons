@@ -18,6 +18,7 @@ export function CardTile({
   hint,
   tag,
   onClick,
+  onInspect,
 }: {
   card: SeasonsCardView;
   selected?: boolean;
@@ -25,6 +26,7 @@ export function CardTile({
   hint?: string;
   tag?: string;
   onClick?: () => void;
+  onInspect?: (cardId: number) => void;
 }) {
   const def = CARD_BY_ID.get(card.i);
   const name = nameOf(card.i);
@@ -65,6 +67,19 @@ export function CardTile({
         {tag && <span className="ss-card-tile-tag">{tag}</span>}
       </figcaption>
       {card.used && <span className="ss-card-used">已激活</span>}
+      {onInspect && (
+        <button
+          type="button"
+          className="ss-card-tile-info"
+          aria-label={`查看${name}详情`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onInspect(card.i);
+          }}
+        >
+          ?
+        </button>
+      )}
       {hint && <span className="ss-card-tile-hint">{hint}</span>}
     </figure>
   );

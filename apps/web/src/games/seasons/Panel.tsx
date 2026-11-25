@@ -15,6 +15,7 @@ import { dieArt } from './art';
 import { ElementChoice, ElementCost, ElementPips, ElementRow } from './energy/ElementStack';
 import { CardMini } from './cards/CardMini';
 import { CardPile } from './cards/CardPile';
+import { CardDetail } from './cards/CardDetail';
 import { CardTile } from './cards/CardTile';
 import './styles.css';
 
@@ -379,6 +380,7 @@ function MyZone({
   onSend,
   onFlexSummon,
   onSelectSummon,
+  onInspect,
 }: {
   player: SeasonsPlayerView;
   game: SeasonsGameView;
@@ -386,6 +388,7 @@ function MyZone({
   onSend: (action: SeasonsAction) => void;
   onFlexSummon: (uid: number) => void;
   onSelectSummon: (uid: number, cardId: number) => void;
+  onInspect: (cardId: number) => void;
 }) {
   const [picked, setPicked] = useState<number[]>([]);
 
@@ -398,7 +401,7 @@ function MyZone({
         </h3>
         <div className="ss-hand-cards">
           {player.draftHand.map((card) => (
-            <CardTile
+            <CardTile onInspect={onInspect}
               key={card.u}
               card={card}
               hint={canAct ? '点击选中' : undefined}
@@ -470,7 +473,7 @@ function MyZone({
             const belongs = year1.includes(card.u) ? '第 1 年' : year2.includes(card.u) ? '第 2 年' : undefined;
             const isPicked = picked.includes(card.u);
             return (
-              <CardTile
+              <CardTile onInspect={onInspect}
                 key={card.u}
                 card={card}
                 selected={isPicked}
@@ -538,7 +541,7 @@ function MyZone({
             const reason = summonBlockReason(player, card.i, game.players.length);
             const blocked = canAct && reason !== null;
             return (
-              <CardTile
+              <CardTile onInspect={onInspect}
                 key={card.u}
                 card={card}
                 disabled={blocked}
@@ -855,6 +858,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   const opponents = game.players.filter((player) => player.seat !== mySeat);
   const [paying, setPaying] = useState<{ uid: number; cardId: number } | null>(null);
   const [confirming, setConfirming] = useState<{ uid: number; cardId: number } | null>(null);
+  const [inspecting, setInspecting] = useState<number | null>(null);
   const prevPlayed = useRef<Map<number, Set<number>>>(new Map());
   const prevStats = useRef<
     Map<number, { crystals: number; gauge: number; energy: number; logCount: number }>
@@ -1017,6 +1021,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
               if (card) setPaying({ uid, cardId: card.i });
             }}
             onSelectSummon={(uid, cardId) => setConfirming({ uid, cardId })}
+            onInspect={setInspecting}
           />
         )}
         {me && paying && (
@@ -1044,6 +1049,9 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
               send({ type: 'summon', cardUid: uid });
             }}
           />
+        )}
+        {inspecting !== null && (
+          <CardDetail cardId={inspecting} onClose={() => setInspecting(null)} />
         )}
         <ResultBlock game={game} />
       </div>
