@@ -550,4 +550,5 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
   - 39 提图斯：先检查所有对手，只要有一位水晶为 0 就牺牲本卡、**不向任何人收水晶**；全部付得起时才每位对手给 1。此前是「边收边判、付不起也收其他人的」。
   - 测试：死灵匕首 3 例（弃手牌随从、牺牲场上随从、无随从被拒），提图斯断言改为「对手 0 水晶时自己仍是 10」。**171 tests 全绿**；三包 build 通过。
   - L1：死灵匕首移出 4g（旧引擎实现的是「牺牲本卡」，与卡面不一致；按用户裁定以卡面为准，改由单测覆盖）；L1 稳定 116–119 检查点。
-  - 部署：按用户明确指令重新构建并部署到本机 BGX 线上。
+  - 部署（2026-11-25 10:40）：三包 build（内存守卫下 protocol/server/web 均通过），rsync web dist → `/var/www/bgx`、仓库 → `/opt/bgx/app`（排除 .git/data/apps/web/src/dist/bgx_seasons），重装 `bgx.service` 并重启，`/healthz` ok。线上验证：入口 `index-DIcHmn62.js`；`/bgx/api/games` 的 seasons 为 2–4 人、options 只剩 `customDeck`；`/opt/bgx/app` 的 engine.js 含 `hand_or_play`；51 张卡图 webp 可访问。
+  - 验证汇总：171 tests；L1 116–119 检查点；soak 2 人 100 局 + 3/4 人各 40 局（随机池）全过；ui-flow、渲染冒烟 1187 次、数据基线 50 卡全部通过。
