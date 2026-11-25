@@ -8,6 +8,7 @@ import {
   type SeasonsGameView,
 } from '@bgx/protocol/games/seasons';
 import { cardArt } from './art';
+import { ElementChoice, ElementPips, ElementRow } from './energy/ElementStack';
 import './styles.css';
 
 const ELEMENT_NAME: Record<Element, string> = { water: '水', air: '风', fire: '火', earth: '土' };
@@ -99,24 +100,21 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
     const current = (options.current ?? {}) as Partial<Record<Element, number>>;
     const incoming = (options.incoming ?? {}) as Partial<Record<Element, number>>;
     const sum = ELEMENTS.reduce((acc, element) => acc + alloc[element], 0);
-    const currentText = ELEMENTS.filter((element) => (current[element] ?? 0) > 0)
-      .map((element) => `${current[element]}${ELEMENT_NAME[element]}`)
-      .join(' ') || '无';
     body = (
       <div className="ss-alloc">
-        <p className="ss-muted">
-          储备区上限 {total}，当前储备：{currentText}
-          {incoming && Object.values(incoming).some((n) => (n ?? 0) > 0)
-            ? `；新获得：${ELEMENTS.filter((element) => (incoming[element] ?? 0) > 0)
-                .map((element) => `${incoming[element]}${ELEMENT_NAME[element]}`)
-                .join(' ')}`
-            : ''}
-        </p>
+        <p className="ss-muted">储备区上限 {total}。当前储备：</p>
+        <ElementRow counts={current} size="sm" />
+        {incoming && Object.values(incoming).some((n) => (n ?? 0) > 0) && (
+          <>
+            <p className="ss-muted">新获得：</p>
+            <ElementRow counts={incoming} size="sm" />
+          </>
+        )}
         {ELEMENTS.map((element) => {
           const cap = (current[element] ?? 0) + (incoming[element] ?? 0);
           return (
             <div className="ss-alloc-row" key={element}>
-              <span>{ELEMENT_NAME[element]}</span>
+              <ElementPips element={element} count={cap} size="sm" showEmpty />
               <button
                 type="button"
                 className="ss-button"
@@ -125,7 +123,7 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
               >
                 −
               </button>
-              <b>{alloc[element]}</b>
+              <ElementPips element={element} count={alloc[element]} size="sm" showEmpty />
               <button
                 type="button"
                 className="ss-button"
@@ -134,7 +132,6 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
               >
                 ＋
               </button>
-              <span className="ss-muted">可用 {cap}</span>
             </div>
           );
         })}
@@ -158,7 +155,7 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
           const cap = maxPerElement[element] ?? amount;
           return (
             <div className="ss-alloc-row" key={element}>
-              <span>{ELEMENT_NAME[element]}</span>
+              <ElementPips element={element} count={cap} size="sm" showEmpty />
               <button
                 type="button"
                 className="ss-button"
@@ -167,7 +164,7 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
               >
                 −
               </button>
-              <b>{alloc[element]}</b>
+              <ElementPips element={element} count={alloc[element]} size="sm" showEmpty />
               <button
                 type="button"
                 className="ss-button"
@@ -176,7 +173,6 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
               >
                 ＋
               </button>
-              <span className="ss-muted">上限 {cap}</span>
             </div>
           );
         })}
@@ -200,7 +196,7 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
       <div className="ss-alloc">
         {ELEMENTS.map((element) => (
           <div className="ss-alloc-row" key={element}>
-            <span>{ELEMENT_NAME[element]}</span>
+            <ElementPips element={element} count={available[element] ?? 0} size="sm" showEmpty />
             <button
               type="button"
               className="ss-button"
@@ -211,7 +207,7 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
             >
               −
             </button>
-            <b>{alloc[element]}</b>
+            <ElementPips element={element} count={alloc[element]} size="sm" showEmpty />
             <button
               type="button"
               className="ss-button"
@@ -222,7 +218,6 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
             >
               ＋
             </button>
-            <span className="ss-muted">可用 {available[element] ?? 0}</span>
           </div>
         ))}
         <p className="ss-muted">
@@ -258,7 +253,7 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
             className={`ss-button${selectedElements.includes(element) ? ' ss-button-primary' : ''}`}
             onClick={() => toggleElement(element)}
           >
-            {ELEMENT_NAME[element]} ×{count}
+            <ElementChoice element={element} count={count} selected={selectedElements.includes(element)} />
           </button>
         ))}
         <button
@@ -281,7 +276,11 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
             className={`ss-button${selectedElement === element ? ' ss-button-primary' : ''}`}
             onClick={() => setSelectedElement(element)}
           >
-            {ELEMENT_NAME[element]}
+            <ElementChoice
+              element={element}
+              count={chooser?.energies[element] ?? 0}
+              selected={selectedElement === element}
+            />
           </button>
         ))}
         <button
