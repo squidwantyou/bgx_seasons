@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { CARD_BY_ID } from '@bgx/protocol/games/seasons-cards-all';
 import type { SeasonsCardView } from '@bgx/protocol/games/seasons';
 import { cardArt } from '../art';
@@ -29,6 +30,14 @@ export function CardTile({
   onInspect?: (cardId: number) => void;
 }) {
   const def = CARD_BY_ID.get(card.i);
+  const longPress = useRef<number | null>(null);
+  const suppressClick = useRef(false);
+  const cancelLongPress = () => {
+    if (longPress.current !== null) {
+      window.clearTimeout(longPress.current);
+      longPress.current = null;
+    }
+  };
   const name = nameOf(card.i);
   const art = cardArt(card.i);
   const cost = def?.cost;
@@ -53,7 +62,28 @@ export function CardTile({
         .filter(Boolean)
         .join(' ')}
       title={`${name}${hint ? ` · ${hint}` : ''}`}
-      onClick={interactive ? onClick : undefined}
+      onTouchStart={() => {
+        if (!onInspect) return;
+        cancelLongPress();
+        longPress.current = window.setTimeout(() => {
+          suppressClick.current = true;
+          onInspect(card.i);
+        }, 500);
+      }}
+      onTouchEnd={cancelLongPress}
+      onTouchMove={cancelLongPress}
+      onTouchCancel={cancelLongPress}
+      onContextMenu={(event) => {
+        if (onInspect) event.preventDefault();
+      }}
+      onClick={(event) => {
+        if (suppressClick.current) {
+          suppressClick.current = false;
+          event.preventDefault();
+          return;
+        }
+        if (interactive) onClick?.();
+      }}
     >
       {art ? (
         <img className="ss-card-tile-art" src={art} alt={name} loading="lazy" decoding="async" draggable={false} />
