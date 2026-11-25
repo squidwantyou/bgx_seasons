@@ -17,6 +17,7 @@ import { CardMini } from './cards/CardMini';
 import { CardPile } from './cards/CardPile';
 import { CardDetail } from './cards/CardDetail';
 import { Glossary } from './Glossary';
+import { Onboarding, markOnboardingDone, onboardingDone } from './Onboarding';
 import { CardTile } from './cards/CardTile';
 import './styles.css';
 
@@ -874,6 +875,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   const [confirming, setConfirming] = useState<{ uid: number; cardId: number } | null>(null);
   const [inspecting, setInspecting] = useState<number | null>(null);
   const [glossary, setGlossary] = useState(false);
+  const [onboarding, setOnboarding] = useState(false);
   const prevPlayed = useRef<Map<number, Set<number>>>(new Map());
   const prevStats = useRef<
     Map<number, { crystals: number; gauge: number; energy: number; logCount: number }>
@@ -882,17 +884,39 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   const [floats, setFloats] = useState<Map<number, { crystals?: number; gauge?: number; energy?: number }>>(
     new Map(),
   );
-  const [banner, setBanner] = useState<{ key: number; msg: string; t: string } | null>(null);
+  const [bannerQueue, setBannerQueue] = useState<{ key: number; msg: string; t: string }[]>([]);
+  const shownLog = useRef(0);
   const prevMyTurn = useRef<boolean>(false);
   const [turnToast, setTurnToast] = useState(false);
   const logCount = game.log.length;
   useEffect(() => {
-    if (logCount === 0) return;
-    const latest = game.log[logCount - 1]!;
-    setBanner({ key: logCount, msg: latest.msg, t: latest.t });
-    const timer = window.setTimeout(() => setBanner(null), 2400);
-    return () => window.clearTimeout(timer);
+    if (logCount === 0) {
+      shownLog.current = 0;
+      return;
+    }
+    if (logCount < shownLog.current) {
+      shownLog.current = logCount;
+      setBannerQueue([]);
+      return;
+    }
+    if (logCount === shownLog.current) return;
+    const added = game.log.slice(shownLog.current).map((entry, index) => ({
+      key: shownLog.current + index,
+      msg: entry.msg,
+      t: entry.t,
+    }));
+    shownLog.current = logCount;
+    setBannerQueue((queue) => [...queue, ...added].slice(-3));
   }, [logCount, game.log]);
+  useEffect(() => {
+    if (bannerQueue.length === 0) return;
+    const timer = window.setTimeout(() => setBannerQueue((queue) => queue.slice(1)), 1600);
+    return () => window.clearTimeout(timer);
+  }, [bannerQueue]);
+  const banner = bannerQueue[0] ?? null;
+  useEffect(() => {
+    if (game.phase === 'play' && !onboardingDone()) setOnboarding(true);
+  }, [game.phase]);
   useEffect(() => {
     if (game.myTurn && !prevMyTurn.current) {
       setTurnToast(true);
@@ -981,6 +1005,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
       {banner && (
         <div key={banner.key} className={`ss-banner ss-banner-${banner.t}`} role="status">
           {banner.msg}
+          {bannerQueue.length > 1 && <span className="ss-banner-queue">+{bannerQueue.length - 1}</span>}
         </div>
       )}
 
@@ -1071,6 +1096,14 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
               const uid = confirming.uid;
               setConfirming(null);
               send({ type: 'summon', cardUid: uid });
+            }}
+          />
+        )}
+        {onboarding && (
+          <Onboarding
+            onClose={() => {
+              markOnboardingDone();
+              setOnboarding(false);
             }}
           />
         )}

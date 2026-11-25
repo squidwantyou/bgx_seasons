@@ -1259,3 +1259,26 @@
   outline-offset: 3px;
   border-radius: var(--ss-radius-md);
 }
+
+/* ---------- F7.1 横幅队列 / F7.3 新手引导 ---------- */
+.ss-banner-queue {
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ss-muted);
+}
+
+.ss-onboarding-list {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ss-onboarding-list p { margin: 2px 0 0; color: var(--ss-muted); }
+
+.ss-onboarding-go { width: 100%; }
