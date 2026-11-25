@@ -67,7 +67,7 @@ export function CardMini({
         </button>
       )}
       {art ? (
-        <img src={art} alt="" loading="lazy" draggable={false} />
+        <img src={art} alt="" loading="lazy" decoding="async" draggable={false} />
       ) : (
         <span className="ss-card-mini-missing">{name}</span>
       )}

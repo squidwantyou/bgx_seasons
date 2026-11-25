@@ -1224,3 +1224,38 @@
   .ss-muted, .ss-stat, .ss-card-mini-meta { font-size: 12px; }
   .ss-hand-cards { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
 }
+
+/* ---------- F7.1 减少动效 / 图片解码 ---------- */
+.ss-card-tile-art,
+.ss-card-mini img {
+  content-visibility: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-banner,
+  .ss-turn-toast,
+  .ss-float,
+  .ss-phase-pop,
+  .ss-die-in,
+  .ss-log-in,
+  .ss-card-mini-fresh,
+  .ss-log li:last-child {
+    animation: none !important;
+  }
+  .ss-card-tile,
+  .ss-card-mini,
+  .ss-button,
+  .ss-die {
+    transition: none !important;
+  }
+  .ss-card-tile-clickable:hover,
+  .ss-card-mini-clickable:hover {
+    transform: none;
+  }
+}
+
+.ss-die[role='button']:focus-visible {
+  outline: 2px solid var(--ss-accent);
+  outline-offset: 3px;
+  border-radius: var(--ss-radius-md);
+}

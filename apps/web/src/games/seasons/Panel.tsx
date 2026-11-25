@@ -668,6 +668,9 @@ function DicePool({
           const seatColor = picked ? SEAT_COLORS[(die.pickedBy as number) % SEAT_COLORS.length] : undefined;
           return (
             <figure
+              role={pickable && !picked ? 'button' : undefined}
+              tabIndex={pickable && !picked ? 0 : undefined}
+              aria-label={`骰子 ${die.pip} 点${picked ? `，座位 ${(die.pickedBy as number) + 1} 已选` : '，可选'}`}
               className={[
                 'ss-die',
                 picked ? 'ss-die-picked' : '',
@@ -678,6 +681,13 @@ function DicePool({
               key={die.id}
               style={{ animationDelay: `${index * 45}ms` }}
               onClick={pickable && !picked ? () => onSend({ type: 'draft-dice', dieIndex: index }) : undefined}
+              onKeyDown={(event) => {
+                if (!pickable || picked) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSend({ type: 'draft-dice', dieIndex: index });
+                }
+              }}
             >
               {art ? (
                 <img
