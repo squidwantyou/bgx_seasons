@@ -184,6 +184,9 @@ try {
             if (!html.includes(marker)) throw new Error(`Panel 输出缺少关键入口：${marker}`);
           }
         }
+        if (seat === 0 && state.phase !== 'ended' && !state.pendingChoice && view.myTurn) {
+          if (!html.includes('ss-hints')) throw new Error('行动提示（ss-hints）缺失');
+        }
         if (state.phase === 'ended') {
           for (const marker of ['ss-result', 'ss-result-row']) {
             if (!html.includes(marker)) throw new Error(`终局结算缺少 ${marker}`);
