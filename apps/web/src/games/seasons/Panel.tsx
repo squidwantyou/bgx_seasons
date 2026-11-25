@@ -16,6 +16,7 @@ import { ElementChoice, ElementCost, ElementPips, ElementRow } from './energy/El
 import { CardMini } from './cards/CardMini';
 import { CardPile } from './cards/CardPile';
 import { CardDetail } from './cards/CardDetail';
+import { Glossary } from './Glossary';
 import { CardTile } from './cards/CardTile';
 import './styles.css';
 
@@ -202,6 +203,7 @@ function PlayerBlock({
   highlightUids,
   float,
   onPlayedClick,
+  onInspect,
 }: {
   player: SeasonsPlayerView;
   label: string;
@@ -210,6 +212,7 @@ function PlayerBlock({
   highlightUids?: Set<number>;
   float?: { crystals?: number; gauge?: number; energy?: number };
   onPlayedClick?: (uid: number) => void;
+  onInspect: (cardId: number) => void;
 }) {
   const seatColor = SEAT_COLORS[player.seat % SEAT_COLORS.length];
   return (
@@ -289,6 +292,7 @@ function PlayerBlock({
               fresh={highlightUids?.has(card.u)}
               hint={card.used ? '本回合已激活' : onPlayedClick ? '点击激活' : undefined}
               onClick={onPlayedClick && !card.used ? () => onPlayedClick(card.u) : undefined}
+              onInspect={onInspect}
             />
           ))
         )}
@@ -859,6 +863,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   const [paying, setPaying] = useState<{ uid: number; cardId: number } | null>(null);
   const [confirming, setConfirming] = useState<{ uid: number; cardId: number } | null>(null);
   const [inspecting, setInspecting] = useState<number | null>(null);
+  const [glossary, setGlossary] = useState(false);
   const prevPlayed = useRef<Map<number, Set<number>>>(new Map());
   const prevStats = useRef<
     Map<number, { crystals: number; gauge: number; energy: number; logCount: number }>
@@ -990,6 +995,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
               compact
               highlightUids={fresh.get(player.seat)}
               float={floats.get(player.seat)}
+              onInspect={setInspecting}
             />
           ))}
         </div>
@@ -1004,6 +1010,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
             highlightUids={fresh.get(me.seat)}
             float={floats.get(me.seat)}
             onPlayedClick={canAct ? (uid) => send({ type: 'activate', cardUid: uid }) : undefined}
+            onInspect={setInspecting}
           />
         ) : (
           <p className="ss-muted">观战中</p>
@@ -1050,6 +1057,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
             }}
           />
         )}
+        {glossary && <Glossary onClose={() => setGlossary(false)} />}
         {inspecting !== null && (
           <CardDetail cardId={inspecting} onClose={() => setInspecting(null)} />
         )}
