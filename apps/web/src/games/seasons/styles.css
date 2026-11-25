@@ -958,3 +958,55 @@
 .ss-card-tile-disabled.ss-card-tile-clickable:hover { transform: none; }
 
 .ss-card-tile-disabled .ss-card-tile-hint { opacity: 0.95; }
+
+/* ---------- F4.2 召唤确认条 ---------- */
+.ss-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: var(--ss-radius-md);
+  border: 1px solid var(--ss-accent);
+  background: linear-gradient(90deg, var(--ss-accent-soft), transparent 70%), var(--ss-surface-2);
+  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.ss-confirm-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.ss-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .ss-confirm { position: sticky; bottom: 8px; }
+  .ss-confirm-actions { width: 100%; }
+  .ss-confirm-actions .ss-button { flex: 1; }
+}
+
+/* ---------- F4.3 可激活角标 / F4.4 防误触 ---------- */
+.ss-card-mini-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #101a24;
+  background: var(--ss-accent);
+  vertical-align: middle;
+}
+
+.ss-button-danger {
+  background: var(--ss-danger);
+  border-color: var(--ss-danger);
+  color: #fff;
+}

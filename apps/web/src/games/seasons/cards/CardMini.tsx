@@ -24,7 +24,11 @@ export function CardMini({
   const name = nameOf(card.i);
   const art = cardArt(card.i);
   const interactive = Boolean(onClick);
+  const def = CARD_BY_ID.get(card.i);
   const stored = (card as { stored?: Partial<Record<'water' | 'air' | 'fire' | 'earth', number>> }).stored;
+  const activatable =
+    !card.used &&
+    Boolean(def?.effect && (def.effect.trigger === 'activation' || def.effect.triggers?.includes('activation')));
   return (
     <button
       type="button"
@@ -38,7 +42,7 @@ export function CardMini({
         .join(' ')}
       disabled={!interactive}
       onClick={onClick}
-      title={`${name}${hint ? ` · ${hint}` : ''}`}
+      title={`${name}${def?.desc ? ` · ${def.desc}` : ''}${hint ? ` · ${hint}` : ''}`}
     >
       {art ? (
         <img src={art} alt="" loading="lazy" draggable={false} />
@@ -46,7 +50,10 @@ export function CardMini({
         <span className="ss-card-mini-missing">{name}</span>
       )}
       <span className="ss-card-mini-body">
-        <span className="ss-card-mini-name">{name}</span>
+        <span className="ss-card-mini-name">
+          {name}
+          {activatable && <span className="ss-card-mini-badge">可激活</span>}
+        </span>
         <span className="ss-card-mini-meta">
           {card.used ? '本回合已激活' : hint ?? ''}
         </span>

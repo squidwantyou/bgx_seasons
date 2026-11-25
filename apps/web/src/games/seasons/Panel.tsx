@@ -4,6 +4,7 @@ import { CARD_BY_ID } from '@bgx/protocol/games/seasons-cards-all';
 import {
   ELEMENTS,
   type Element,
+  type SeasonsCardCost,
   type SeasonsCardView,
   type SeasonsGameView,
   type SeasonsPlayerView,
@@ -11,7 +12,7 @@ import {
 import type { SeasonsAction } from '@bgx/protocol/games/seasons';
 import type { GamePanelProps } from '../types';
 import { dieArt } from './art';
-import { ElementChoice, ElementPips, ElementRow } from './energy/ElementStack';
+import { ElementChoice, ElementCost, ElementPips, ElementRow } from './energy/ElementStack';
 import { CardMini } from './cards/CardMini';
 import { CardPile } from './cards/CardPile';
 import { CardTile } from './cards/CardTile';
@@ -315,18 +316,76 @@ function ResultBlock({ game }: { game: SeasonsGameView }) {
   );
 }
 
+/** F4.2 召唤确认条：选中手牌后先预览费用与剩余储备，再确认提交。 */
+function SummonConfirm({
+  cardId,
+  player,
+  playerCount,
+  onCancel,
+  onConfirm,
+}: {
+  cardId: number;
+  player: SeasonsPlayerView;
+  playerCount: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const def = CARD_BY_ID.get(cardId);
+  const reserve = reserveOf(player);
+  const byPlayers = def?.costByPlayers as
+    | Partial<Record<string, Partial<SeasonsCardCost>>>
+    | undefined;
+  const cost: SeasonsCardCost = {
+    water: 0,
+    air: 0,
+    fire: 0,
+    earth: 0,
+    crystal: 0,
+    ...(def?.cost ?? {}),
+    ...(byPlayers?.[String(playerCount)] ?? {}),
+  };
+  const after: Partial<Record<Element, number>> = {};
+  for (const element of ELEMENTS) after[element] = Math.max(0, reserve[element] - (cost[element] ?? 0));
+  return (
+    <div className="ss-confirm" role="dialog" aria-label="确认召唤">
+      <div className="ss-confirm-main">
+        <strong>{def?.nameZh ?? `卡牌 #${cardId}`}</strong>
+        <span className="ss-muted">费用</span>
+        <ElementCost counts={cost} crystal={cost.crystal ?? 0} />
+        <span className="ss-muted">召唤后剩余</span>
+        <ElementRow counts={after} size="sm" />
+        {(cost.crystal ?? 0) > 0 && (
+          <span className="ss-muted">
+            水晶 {player.crystals} → {Math.max(0, player.crystals - (cost.crystal ?? 0))}
+          </span>
+        )}
+      </div>
+      <div className="ss-confirm-actions">
+        <button type="button" className="ss-button ss-button-ghost" onClick={onCancel}>
+          取消
+        </button>
+        <button type="button" className="ss-button ss-button-primary" onClick={onConfirm}>
+          确认召唤
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MyZone({
   player,
   game,
   canAct,
   onSend,
   onFlexSummon,
+  onSelectSummon,
 }: {
   player: SeasonsPlayerView;
   game: SeasonsGameView;
   canAct: boolean;
   onSend: (action: SeasonsAction) => void;
   onFlexSummon: (uid: number) => void;
+  onSelectSummon: (uid: number, cardId: number) => void;
 }) {
   const [picked, setPicked] = useState<number[]>([]);
 
@@ -449,6 +508,12 @@ function PlayActions({
   canAct: boolean;
   onSend: (action: SeasonsAction) => void;
 }) {
+  const [endArmed, setEndArmed] = useState(false);
+  useEffect(() => {
+    if (!endArmed) return;
+    const timer = window.setTimeout(() => setEndArmed(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [endArmed]);
   if (game.phase !== 'play') return null;
   return (
     <section className="ss-actions">
@@ -472,11 +537,18 @@ function PlayActions({
       <div className="ss-actions-row">
         <button
           type="button"
-          className="ss-button ss-button-primary"
+          className={`ss-button ${endArmed ? 'ss-button-danger' : 'ss-button-primary'}`}
           disabled={!canAct}
-          onClick={() => onSend({ type: 'end-turn' })}
+          onClick={() => {
+            if (!endArmed) {
+              setEndArmed(true);
+              return;
+            }
+            setEndArmed(false);
+            onSend({ type: 'end-turn' });
+          }}
         >
-          结束回合
+          {endArmed ? '再点一次确认结束回合' : '结束回合'}
         </button>
         <button
           type="button"
@@ -717,6 +789,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   const me = mySeat === null ? null : (game.players.find((player) => player.seat === mySeat) ?? null);
   const opponents = game.players.filter((player) => player.seat !== mySeat);
   const [paying, setPaying] = useState<{ uid: number; cardId: number } | null>(null);
+  const [confirming, setConfirming] = useState<{ uid: number; cardId: number } | null>(null);
   const prevPlayed = useRef<Map<number, Set<number>>>(new Map());
   const prevStats = useRef<
     Map<number, { crystals: number; gauge: number; energy: number; logCount: number }>
@@ -878,6 +951,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
               const card = me?.hand?.find((item) => item.u === uid);
               if (card) setPaying({ uid, cardId: card.i });
             }}
+            onSelectSummon={(uid, cardId) => setConfirming({ uid, cardId })}
           />
         )}
         {me && paying && (
@@ -890,6 +964,19 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
               const uid = paying.uid;
               setPaying(null);
               send({ type: 'summon', cardUid: uid, paidElements: paid });
+            }}
+          />
+        )}
+        {me && confirming && me.hand?.some((card) => card.u === confirming.uid) && (
+          <SummonConfirm
+            cardId={confirming.cardId}
+            player={me}
+            playerCount={game.players.length}
+            onCancel={() => setConfirming(null)}
+            onConfirm={() => {
+              const uid = confirming.uid;
+              setConfirming(null);
+              send({ type: 'summon', cardUid: uid });
             }}
           />
         )}
