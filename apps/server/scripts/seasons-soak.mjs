@@ -98,7 +98,13 @@ function candidates(state) {
   const seat = p.choosingSeat;
   const me = state.players[seat];
   if (p.kind === 'branch') {
-    return (p.options.branches ?? []).map((branch) => ({ id: branch.id }));
+    const branches = (p.options.branches ?? []).map((branch) => ({ id: branch.id }));
+    // 恶意之骰优先试「重掷」，把多次重掷链路也压进压力测试。
+    if (p.key === 'die_of_malice') {
+      const alt = branches.find((branch) => branch.id === 'alternative');
+      if (alt) return [alt, ...branches.filter((branch) => branch !== alt)];
+    }
+    return branches;
   }
   if (p.kind === 'month_advance') return [{ direction: 'forward', steps: 1 }];
   if (p.kind === 'card_pick') {

@@ -12,7 +12,7 @@
 | 当前任务 | T5.1 储备语义统一 ✅；T5.2 卡池校验/注册表 ✅（现只保留基础 50 张，`customDeck` 仍可指定）；T5.4 卡池压力测试 ✅（参数改为 `[局数] [人数] [随机池大小]`）；T5.5 卡效修正 ✅（4/7/12/36/42 按用户裁定、41 偷窃妖精补实现、扩展 51–90 删除；11-25 又按用户确认修正 44 死灵匕首与 39 提图斯）；T5.6 预设卡池 ✅（五福季节 5×20、骰子季节 100 张恶意之骰）。待做：T5.3 效果处理器注册表。剩余人工项：T4.4b 由用户手测、T3.6b 不装 Playwright、T4.7b 不再重复部署 |
 | 迷你版目标 | 3 个夜间时段（约 6 次运行）产出「2 人可完整打完一局」 |
 | 完整版目标 | 之后约 1 周：基础 50 卡全量 + ext1/ext2 + 打磨 |
-| 最后更新 | 2026-11-25 12:20 |
+| 最后更新 | 2026-11-25 12:45 |
 
 ## 1. 目标与边界
 
@@ -571,3 +571,10 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
   - 实现：`SeasonsPool` 增加 `'dice_season'`，卡池选项加「骰子季节（100 张恶意之骰）」；引擎 `DICE_SEASON_ID=15 / DICE_SEASON_COPIES=100` 单条目卡池；soak 第 4 参数支持 `dice_season`。界面仍只有「卡池」一个选项。
   - 验证：173 tests 全绿；纯恶意之骰对局可正常打完——soak 2 人 60 局、3 人 40 局、4 人 40 局全过（选择分布主要是 die_of_malice 的 branch 与能量重分配）；三包 build 通过。
   - 部署（12:22）：三包 build（内存守卫）通过，rsync web dist → `/var/www/bgx`、仓库 → `/opt/bgx/app`，重装并重启 `bgx.service`，`/healthz` ok。线上验证：入口 `index-B9jyRy-J.js`；`/bgx/api/games` 的卡池选项为 standard / five_fortunes / dice_season 三个值；`/opt/bgx/app` 的 engine.js 与 protocol dist 含 `dice_season`。
+
+- **2026-11-25 12:30–12:45** 修正恶意之骰的多张结算（用户报告）。
+  - 现象：场上有 N 张恶意之骰时，回合开始只问一次是否重掷；应为 N 次，且玩家可在任意次之后放弃。
+  - 实现：`dieRerollOf` 改为统计场上带 `dice_reroll` 的卡牌张数（返回 `{crystals,name,count}`）；`beginTurn` 挂 `branch` 时带 `options.remaining = count`，标题显示「剩余 N 次」；`resolveBranch` 的 `alternative` 每次重掷 +2 水晶、`remaining-1`，若还剩余则继续挂下一个 `branch`，选 `normal` 则放弃剩余次数并结算一次骰面奖励；骰面奖励只在链路结束时结算一次。
+  - 测试：+3 例（2 张可重掷 2 次且中途放弃、连续两次各 +2 且只结算一次骰面、3 张时第一次就放弃）→ **176 tests 全绿**。
+  - soak：候选生成对 `die_of_malice` 优先试 `alternative`，把多重重掷链路压进压力测试；骰子季节 2 人 40 局、3 人 25 局、4 人 25 局全部通过（branch 次数较此前约 3 倍）。
+  - 部署：三包 build（内存守卫）→ rsync → 重启 `bgx.service`；线上入口与 `/healthz` 已确认，线上引擎含新的 `remaining` 链路逻辑。

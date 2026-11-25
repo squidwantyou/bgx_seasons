@@ -681,44 +681,58 @@ function organizeReset(state: SeasonsState, seat: number): ReduceResult<SeasonsS
   return { ok: true, state: { ...state, players }, events: [{ type: 'organize_reset', seat }] };
 }
 
-/** 场上是否有「恶意之骰」这类可重掷骰子的能力。 */
-function dieRerollOf(player: SeasonsPlayerState): { crystals: number; name: string } | null {
+/** 场上「恶意之骰」这类可重掷骰子的能力：每张牌每回合各提供一次。 */
+function dieRerollOf(
+  player: SeasonsPlayerState,
+): { crystals: number; name: string; count: number } | null {
+  let count = 0;
+  let crystals = 2;
+  let name = '恶意之骰';
   for (const card of player.played) {
     const def = cardById(card.i);
     if (!def) continue;
-    const abilities = abilitiesOf(def, 'dice_reroll');
-    const ability = abilities[0];
+    const ability = abilitiesOf(def, 'dice_reroll')[0];
     if (!ability) continue;
-    return {
-      crystals: typeof ability.crystals === 'number' ? ability.crystals : 2,
-      name: def.nameZh,
-    };
+    count += 1;
+    crystals = typeof ability.crystals === 'number' ? ability.crystals : 2;
+    name = def.nameZh;
   }
-  return null;
+  if (count === 0) return null;
+  return { crystals, name, count };
 }
 
-/** 玩家开始行动：先问是否用「恶意之骰」重掷，再结算骰面奖励。 */
+/** 构造一次「是否重掷」选择；remaining 表示还能重掷几次（含本次）。 */
+function maliceChoice(
+  reroll: { crystals: number; name: string },
+  remaining: number,
+): SeasonsState['pendingChoice'] {
+  return {
+    kind: 'branch',
+    key: 'die_of_malice',
+    choosingSeat: -1,
+    options: {
+      title: `${reroll.name}：是否重掷本回合的骰子？（剩余 ${remaining} 次）`,
+      crystals: reroll.crystals,
+      remaining,
+      branches: [
+        { id: 'normal', label: '不再重掷，结算骰面' },
+        { id: 'alternative', label: `重掷骰子并得 ${reroll.crystals} 水晶` },
+      ],
+    },
+  };
+}
+
+/** 玩家开始行动：先问是否用「恶意之骰」重掷（场上有 N 张就能重掷 N 次），再结算骰面奖励。 */
 function beginTurn(state: SeasonsState, seat: number): ReduceResult<SeasonsState> {
   const player = state.players[seat];
   const reroll = player ? dieRerollOf(player) : null;
   if (!reroll) return { ok: true, state: resolveDieRewards(state, seat), events: [] };
+  const pending = maliceChoice(reroll, reroll.count);
   return {
     ok: true,
     state: {
       ...state,
-      pendingChoice: {
-        kind: 'branch',
-        key: 'die_of_malice',
-        choosingSeat: seat,
-        options: {
-          title: `${reroll.name}：是否重掷本回合的骰子？`,
-          crystals: reroll.crystals,
-          branches: [
-            { id: 'normal', label: '正常结算骰面' },
-            { id: 'alternative', label: `重掷骰子并得 ${reroll.crystals} 水晶` },
-          ],
-        },
-      },
+      pendingChoice: pending ? { ...pending, choosingSeat: seat } : null,
     },
     events: [],
   };
@@ -2066,6 +2080,9 @@ function resolveBranch(
         : die,
     );
     const crystals = typeof pending.options.crystals === 'number' ? pending.options.crystals : 2;
+    const remaining =
+      (typeof pending.options.remaining === 'number' ? pending.options.remaining : 1) - 1;
+    const reroll = dieRerollOf(player);
     let next: SeasonsState = {
       ...state,
       ...rngState,
@@ -2081,6 +2098,10 @@ function resolveBranch(
         `${seatName(seat)} 使用「恶意之骰」：重掷骰子（${face.pip} 点）+ 水晶 ${crystals}`,
       ),
     };
+    if (remaining > 0 && reroll) {
+      const choice = maliceChoice(reroll, remaining);
+      return { ok: true, state: { ...next, pendingChoice: choice ? { ...choice, choosingSeat: seat } : null }, events: [] };
+    }
     return { ok: true, state: resolveDieRewards(next, seat), events: [] };
   }
 
