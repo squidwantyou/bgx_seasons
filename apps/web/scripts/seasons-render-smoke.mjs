@@ -180,7 +180,7 @@ try {
         durs.push(performance.now() - started);
         if (!html.includes('ss-board')) throw new Error('Panel 输出缺少 ss-board 根节点');
         if (seat === 0) {
-          for (const marker of ['术语', 'ss-band-top', 'ss-band-bottom']) {
+          for (const marker of ['术语', 'ss-band-top', 'ss-band-bottom', 'ss-log-tools']) {
             if (!html.includes(marker)) throw new Error(`Panel 输出缺少关键入口：${marker}`);
           }
         }
