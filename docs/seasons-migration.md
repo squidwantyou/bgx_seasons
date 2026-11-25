@@ -12,7 +12,7 @@
 | 当前任务 | T5.1 储备语义统一 ✅；T5.2 卡池校验/注册表 ✅（现只保留基础 50 张，`customDeck` 仍可指定）；T5.4 卡池压力测试 ✅（参数改为 `[局数] [人数] [随机池大小]`）；T5.5 卡效修正 ✅（4/7/12/36/42 按用户裁定、41 偷窃妖精补实现、扩展 51–90 删除；11-25 又按用户确认修正 44 死灵匕首与 39 提图斯）；T5.6 预设卡池「五福季节」✅（5 种护符 × 20 张）。待做：T5.3 效果处理器注册表。剩余人工项：T4.4b 由用户手测、T3.6b 不装 Playwright、T4.7b 不再重复部署 |
 | 迷你版目标 | 3 个夜间时段（约 6 次运行）产出「2 人可完整打完一局」 |
 | 完整版目标 | 之后约 1 周：基础 50 卡全量 + ext1/ext2 + 打磨 |
-| 最后更新 | 2026-11-25 11:20 |
+| 最后更新 | 2026-11-25 11:22 |
 
 ## 1. 目标与边界
 
@@ -559,4 +559,4 @@ function randInt(state: S, n: number): [number, S]   // 返回新 state（cursor
   - 实现：`seasons.ts` 新增 `SeasonsPool = 'standard' | 'five_fortunes'` 与 `pool` 选项（默认 `standard`），schema `pool: z.enum([...]).optional()`；引擎把卡池构建改成 `poolEntries(options): {def, copies}[]`（标准 50×2、五福 5×20、customDeck 每种 2），`buildDeck` 按 `copies` 展开。优先级：`customDeck` > `pool` > 标准。
   - 测试：setup 2 人五福季节 → 100 张、发牌后 deck 82、每 id 恰好 20 张；协议测试覆盖 pool 选项与非法值。**172 tests 全绿**。
   - 对局验证：soak 支持第 4 参数传 `five_fortunes`，2 人 60 局、3 人 40 局、4 人 40 局全部通过（纯护符牌池也能打完并结算）。
-  - 未部署：按既有约定，等用户明确指令再同步到 BGX 线上。
+  - 部署（2026-11-25 11:22，用户指令）：protocol/server/web 三包 build（内存守卫下）通过，rsync web dist → `/var/www/bgx`、仓库 → `/opt/bgx/app`，重装并重启 `bgx.service`，`/healthz` ok。线上验证：入口 `index--blNl5_w.js`；`/bgx/api/games` 的 seasons options 含 `pool`（standard / five_fortunes）与 `customDeck`；`/opt/bgx/app` 的 engine.js/protocol dist 含 `five_fortunes`；51 张卡图可访问。
