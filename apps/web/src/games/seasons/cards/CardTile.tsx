@@ -35,6 +35,15 @@ export function CardTile({
   const interactive = Boolean(onClick) && !disabled;
   return (
     <figure
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (!interactive) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
       className={[
         'ss-card-tile',
         selected ? 'ss-card-tile-selected' : '',
@@ -45,15 +54,6 @@ export function CardTile({
         .join(' ')}
       title={`${name}${hint ? ` · ${hint}` : ''}`}
       onClick={interactive ? onClick : undefined}
-      role={interactive ? 'button' : undefined}
-      tabIndex={interactive ? 0 : undefined}
-      onKeyDown={(event) => {
-        if (!interactive) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick?.();
-        }
-      }}
     >
       {art ? (
         <img className="ss-card-tile-art" src={art} alt={name} loading="lazy" draggable={false} />

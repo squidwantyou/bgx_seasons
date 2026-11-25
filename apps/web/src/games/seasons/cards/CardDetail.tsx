@@ -2,6 +2,7 @@ import { CARD_BY_ID } from '@bgx/protocol/games/seasons-cards-all';
 import type { SeasonsCardDef } from '@bgx/protocol/games/seasons';
 import { ElementCost } from '../energy/ElementStack';
 import { cardArt } from '../art';
+import { useDialog } from '../useDialog';
 
 const TRIGGER_NAME: Record<string, string> = {
   on_summon: '召唤时',
@@ -42,11 +43,14 @@ function abilityLabel(def: SeasonsCardDef): string[] {
 /** F5.1 卡牌详情浮层。 */
 export function CardDetail({ cardId, onClose }: { cardId: number; onClose: () => void }) {
   const def = CARD_BY_ID.get(cardId);
+  const dialogRef = useDialog(onClose);
   return (
     <div className="ss-detail-backdrop" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="ss-detail"
         role="dialog"
+        aria-modal="true"
         aria-label={def?.nameZh ?? '卡牌详情'}
         onClick={(event) => event.stopPropagation()}
       >

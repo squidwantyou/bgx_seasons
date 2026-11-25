@@ -953,6 +953,13 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
           <CardPile count={game.deckCount} label="牌堆" kind="deck" />
           <CardPile count={game.discardCount} label="弃牌" kind="discard" />
         </span>
+        <button
+          type="button"
+          className="ss-button ss-button-ghost ss-glossary-open"
+          onClick={() => setGlossary(true)}
+        >
+          术语
+        </button>
       </header>
 
       {turnToast && (
