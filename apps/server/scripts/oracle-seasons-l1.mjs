@@ -735,11 +735,8 @@ for (const playerCount of [2, 3]) {
       oldChoices: [{ choice: { water: 5, air: 0, fire: 0, earth: 0 } }],
       newChoices: [{ water: 5, air: 0, fire: 0, earth: 0 }],
     });
-    // 死灵匕首：牺牲本卡，选 4 个能量
-    runBaseActivation('4g necrotic_kriss', 44, undefined, {
-      oldChoices: [{ choice: { air: 4, water: 0, fire: 0, earth: 0 } }],
-      newChoices: [{ air: 4, water: 0, fire: 0, earth: 0 }],
-    });
+    // 死灵匕首：旧引擎的实现是「牺牲本卡」，与卡面（弃手牌随从或牺牲在场随从）
+    // 不一致；按用户裁定以卡面为准，故不参与 L1 对照（由 engine.test.ts 覆盖）。
     // 光之树 A：弃 3 水晶换 1 能量
     runBaseActivation('4g tree_of_light A', 32, 'crystal_to_energy', {
       crystals: 5,

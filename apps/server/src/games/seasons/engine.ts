@@ -1578,12 +1578,24 @@ function resolveSacrificeCards(
   choice: unknown,
 ): ReduceResult<SeasonsState> {
   const raw = Array.isArray(choice) ? choice[0] : choice;
-  const uid = typeof raw === 'number' ? raw : Number(raw);
+  const value =
+    typeof raw === 'object' && raw !== null && 'uid' in raw
+      ? (raw as { uid?: unknown }).uid
+      : raw;
+  const uid = typeof value === 'number' ? value : Number(value);
   if (!Number.isInteger(uid)) return fail('invalid_choice', '请选择一张在场卡');
   const me = state.players[seat];
   if (!me) return fail('bad_seat', '座位不存在');
-  const card = me.played.find((item) => item.u === uid);
-  if (!card) return fail('invalid_choice', '这张牌不在场上');
+  const fromHandOnly = pending.options.source === 'hand_or_play';
+  const inPlay = me.played.find((item) => item.u === uid);
+  const inHand = fromHandOnly ? me.hand.find((item) => item.u === uid) : undefined;
+  const card = inPlay ?? inHand;
+  if (!card) {
+    return fail(
+      'invalid_choice',
+      fromHandOnly ? '这张牌不在手牌或场上' : '这张牌不在场上',
+    );
+  }
 
   const chosen = Array.isArray(pending.options.chosen)
     ? (pending.options.chosen as number[])
@@ -1594,18 +1606,27 @@ function resolveSacrificeCards(
       : 0;
   const def = cardById(card.i);
   const name = def?.nameZh ?? `#${card.i}`;
+  const isNecrotic = pending.options.then === 'necrotic_energy';
+  const logLine = isNecrotic
+    ? inHand
+      ? `死灵匕首：弃掉手牌「${name}」`
+      : `死灵匕首：牺牲「${name}」`
+    : `龙之头骨：牺牲「${name}」`;
   let next: SeasonsState = {
     ...state,
-    players: state.players.map((player) =>
-      player.seat === seat
-        ? cardSacrificed(
-            { ...player, played: player.played.filter((item) => item.u !== uid) },
-            card,
-          )
-        : player,
-    ),
+    players: state.players.map((player) => {
+      if (player.seat !== seat) return player;
+      if (inHand) {
+        // 手牌随从只是弃掉：不从场上移除，也不触发离场上限恢复。
+        return { ...player, hand: player.hand.filter((item) => item.u !== uid) };
+      }
+      return cardSacrificed(
+        { ...player, played: player.played.filter((item) => item.u !== uid) },
+        card,
+      );
+    }),
     discard: [...state.discard, { i: card.i, u: card.u }],
-    log: pushLog(state.log, 'effect', `龙之头骨：牺牲「${name}」`),
+    log: pushLog(state.log, 'effect', logLine),
   };
 
   if (remaining > 0) {
@@ -1619,13 +1640,32 @@ function resolveSacrificeCards(
     return { ok: true, state: next, events: [] };
   }
 
-  next = patchPlayer(next, seat, (player) => ({
-    crystals: player.crystals + 15,
-  }));
   const actId =
     typeof pending.options.actId === 'string'
       ? pending.options.actId
       : String(pending.options.cardUid ?? uid);
+  if (isNecrotic) {
+    // 续接：获得 4 个任意能量（元素分配选择，完成时再标记已激活）。
+    next = {
+      ...next,
+      pendingChoice: {
+        kind: 'element_alloc',
+        key: 'necrotic_kriss',
+        choosingSeat: seat,
+        options: {
+          amount: 4,
+          title: '选择获得 4 个能量',
+          label: '获得',
+          target: 'reserve',
+          actId,
+        },
+      },
+    };
+    return { ok: true, state: next, events: [] };
+  }
+  next = patchPlayer(next, seat, (player) => ({
+    crystals: player.crystals + 15,
+  }));
   next = markActivated(next, seat, actId);
   next = {
     ...next,
@@ -2533,20 +2573,17 @@ function applyTurnEndEffects(state: SeasonsState, seat: number): SeasonsState {
     }
 
     if (key === 'titus') {
-      let cannotPay = false;
-      players = players.map((player) => {
-        if (player.seat === seat) return player;
-        if (player.crystals <= 0) {
-          cannotPay = true;
-          return player;
-        }
-        crystals += 1;
-        return { ...player, crystals: player.crystals - 1 };
-      });
+      // 先检查所有对手都能付：只要有一人水晶为 0，就牺牲本卡，且不收任何人的水晶。
+      const opponents = players.filter((player) => player.seat !== seat);
+      const cannotPay = opponents.some((player) => player.crystals <= 0);
       if (cannotPay) {
         sacrificed.push(card.u);
-        logs.push('深凝视的提图斯：对手无法支付，被牺牲');
+        logs.push('深凝视的提图斯：有对手无法支付，被牺牲');
       } else {
+        players = players.map((player) =>
+          player.seat === seat ? player : { ...player, crystals: player.crystals - 1 },
+        );
+        crystals += opponents.length;
         logs.push('深凝视的提图斯：每位对手给 1 水晶');
       }
     }
@@ -2947,6 +2984,8 @@ type ActivationRequest =
       amount: number;
       title: string;
       label: string;
+      source?: 'hand_or_play';
+      then?: 'necrotic_energy';
     }
   | {
       kind: 'element_multi';
@@ -3058,11 +3097,14 @@ function activationRequest(
         label: '获得',
       };
     case 'necrotic_kriss':
+      // 弃手牌 1 随从或牺牲在场 1 随从，然后获得 4 任意能量（由 resolveSacrificeCards 续接）。
       return {
-        kind: 'element_alloc',
-        amount: 4,
-        title: '选择获得 4 个能量',
-        label: '获得',
+        kind: 'sacrifice_cards',
+        amount: 1,
+        title: '弃掉 1 张手牌随从，或牺牲 1 张在场随从',
+        label: '选择',
+        source: 'hand_or_play',
+        then: 'necrotic_energy',
       };
     case 'pay_energy_reward': {
       const effect = def.effect;
@@ -3404,7 +3446,6 @@ function activate(
     'potion_knowledge',
     'potion_life',
     'potion_dreams',
-    'necrotic_kriss',
   ]);
   if (SACRIFICE_ON_ACTIVATE.has(activationKeyOf(def))) {
     const meNow = costed.players[seat];
@@ -3549,6 +3590,14 @@ function activate(
     };
   }
 
+  if (activationKeyOf(def) === 'necrotic_kriss') {
+    const actor = costed.players[seat];
+    const hasFamiliar = [...(actor?.hand ?? []), ...(actor?.played ?? [])].some(
+      (card) => cardById(card.i)?.type === 'familiar',
+    );
+    if (!hasFamiliar) return fail('invalid_choice', '没有可弃置或牺牲的随从');
+  }
+
   const request = activationRequest(def, costed, seat, abilityKey);
   if (request === 'unimplemented') {
     return fail(
@@ -3602,7 +3651,12 @@ function activate(
               ? { mode: 'pay', then: 'pay_energy_reward', reward: request.reward }
               : {}),
             ...(request.kind === 'sacrifice_cards'
-              ? { remaining: request.amount, chosen: [] }
+              ? {
+                  remaining: request.amount,
+                  chosen: [],
+                  ...('source' in request && request.source ? { source: request.source } : {}),
+                  ...('then' in request && request.then ? { then: request.then } : {}),
+                }
               : {}),
           },
         },

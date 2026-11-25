@@ -297,7 +297,11 @@ export function ChoiceModal({ game, mySeat, onSend }: ChoiceModalProps) {
   } else if (kind === 'card_pick' || kind === 'card_list' || kind === 'sacrifice_cards') {
     const pool =
       kind === 'sacrifice_cards'
-        ? (chooser?.played ?? [])
+        ? options.source === 'hand_or_play'
+          ? [...(chooser?.played ?? []), ...(chooser?.hand ?? [])].filter(
+              (card) => CARD_BY_ID.get(card.i)?.type === 'familiar',
+            )
+          : (chooser?.played ?? [])
         : kind === 'card_pick' && options.purpose === 'discard'
           ? (chooser?.hand ?? [])
           : cards;
