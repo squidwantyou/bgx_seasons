@@ -146,6 +146,7 @@ function PlayerBlock({
   active = false,
   compact = false,
   highlightUids,
+  float,
   onPlayedClick,
 }: {
   player: SeasonsPlayerView;
@@ -153,6 +154,7 @@ function PlayerBlock({
   active?: boolean;
   compact?: boolean;
   highlightUids?: Set<number>;
+  float?: { crystals?: number; gauge?: number; energy?: number };
   onPlayedClick?: (uid: number) => void;
 }) {
   const seatColor = SEAT_COLORS[player.seat % SEAT_COLORS.length];
@@ -162,6 +164,28 @@ function PlayerBlock({
       style={{ ['--ss-seat' as string]: seatColor }}
     >
       {active && <span className="ss-active-tag">行动中</span>}
+      {float && (
+        <span className="ss-floats" aria-live="polite">
+          {float.crystals ? (
+            <span className={float.crystals > 0 ? 'ss-float ss-float-up' : 'ss-float ss-float-down'}>
+              {float.crystals > 0 ? '+' : ''}
+              {float.crystals} 水晶
+            </span>
+          ) : null}
+          {float.gauge ? (
+            <span className={float.gauge > 0 ? 'ss-float ss-float-up' : 'ss-float ss-float-down'}>
+              {float.gauge > 0 ? '+' : ''}
+              {float.gauge} 等级
+            </span>
+          ) : null}
+          {float.energy ? (
+            <span className={float.energy > 0 ? 'ss-float ss-float-up' : 'ss-float ss-float-down'}>
+              {float.energy > 0 ? '+' : ''}
+              {float.energy} 能量
+            </span>
+          ) : null}
+        </span>
+      )}
       <header className="ss-player-head">
         <span className="ss-seat-tag">{label}</span>
         <strong>{player.isYou ? '你' : '对手'}</strong>
@@ -604,7 +628,57 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   const opponents = game.players.filter((player) => player.seat !== mySeat);
   const [paying, setPaying] = useState<{ uid: number; cardId: number } | null>(null);
   const prevPlayed = useRef<Map<number, Set<number>>>(new Map());
+  const prevStats = useRef<
+    Map<number, { crystals: number; gauge: number; energy: number; logCount: number }>
+  >(new Map());
   const [fresh, setFresh] = useState<Map<number, Set<number>>>(new Map());
+  const [floats, setFloats] = useState<Map<number, { crystals?: number; gauge?: number; energy?: number }>>(
+    new Map(),
+  );
+  const [banner, setBanner] = useState<{ key: number; msg: string; t: string } | null>(null);
+  const prevMyTurn = useRef<boolean>(false);
+  const [turnToast, setTurnToast] = useState(false);
+  const logCount = game.log.length;
+  useEffect(() => {
+    if (logCount === 0) return;
+    const latest = game.log[logCount - 1]!;
+    setBanner({ key: logCount, msg: latest.msg, t: latest.t });
+    const timer = window.setTimeout(() => setBanner(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [logCount, game.log]);
+  useEffect(() => {
+    if (game.myTurn && !prevMyTurn.current) {
+      setTurnToast(true);
+      const timer = window.setTimeout(() => setTurnToast(false), 2000);
+      prevMyTurn.current = game.myTurn;
+      return () => window.clearTimeout(timer);
+    }
+    prevMyTurn.current = game.myTurn;
+  }, [game.myTurn]);
+
+  useEffect(() => {
+    const nextStats = new Map<number, { crystals: number; gauge: number; energy: number; logCount: number }>();
+    const changes = new Map<number, { crystals?: number; gauge?: number; energy?: number }>();
+    for (const player of game.players) {
+      const before = prevStats.current.get(player.seat);
+      const energySum = ELEMENTS.reduce((acc, element) => acc + player.energies[element], 0);
+      if (before) {
+        const diff = {
+          crystals: player.crystals - before.crystals,
+          gauge: player.gauge - before.gauge,
+          energy: energySum - before.energy,
+        };
+        if (diff.crystals !== 0 || diff.gauge !== 0 || diff.energy !== 0) changes.set(player.seat, diff);
+      }
+      nextStats.set(player.seat, { crystals: player.crystals, gauge: player.gauge, energy: energySum, logCount });
+    }
+    prevStats.current = nextStats;
+    if (changes.size > 0) {
+      setFloats(changes);
+      const timer = window.setTimeout(() => setFloats(new Map()), 1700);
+      return () => window.clearTimeout(timer);
+    }
+  }, [game.players]);
   useEffect(() => {
     const nextPlays = new Map<number, Set<number>>();
     const freshPlays = new Map<number, Set<number>>();
@@ -644,6 +718,18 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
         </span>
       </header>
 
+      {turnToast && (
+        <div className="ss-turn-toast" role="status">
+          轮到你了
+        </div>
+      )}
+
+      {banner && (
+        <div key={banner.key} className={`ss-banner ss-banner-${banner.t}`} role="status">
+          {banner.msg}
+        </div>
+      )}
+
       {game.pendingChoice && game.pendingChoice.choosingSeat !== mySeat && (
         <p className="ss-wait">
           等待 座位 {game.pendingChoice.choosingSeat + 1} 完成选择
@@ -671,6 +757,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
               }
               compact
               highlightUids={fresh.get(player.seat)}
+              float={floats.get(player.seat)}
             />
           ))}
         </div>
@@ -683,6 +770,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
             label={`座位 ${me.seat + 1}`}
             active={game.myTurn}
             highlightUids={fresh.get(me.seat)}
+            float={floats.get(me.seat)}
             onPlayedClick={canAct ? (uid) => send({ type: 'activate', cardUid: uid }) : undefined}
           />
         ) : (

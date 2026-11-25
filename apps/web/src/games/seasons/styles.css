@@ -793,3 +793,88 @@
 @media (prefers-reduced-motion: reduce) {
   .ss-phase-pop { animation: none; }
 }
+
+/* ---------- F3.1 行动横幅与资源浮字 ---------- */
+.ss-banner {
+  padding: 8px 12px;
+  border-radius: var(--ss-radius-md);
+  border: 1px solid var(--ss-line-strong);
+  background: linear-gradient(90deg, var(--ss-accent-soft), transparent);
+  color: var(--ss-text);
+  font-size: 13px;
+  animation: ss-banner-in 260ms ease-out;
+}
+
+.ss-banner-summon { border-color: rgba(232, 194, 106, 0.6); }
+.ss-banner-trigger,
+.ss-banner-effect { border-color: rgba(95, 176, 230, 0.55); }
+.ss-banner-season { border-color: rgba(127, 214, 168, 0.55); }
+.ss-banner-score { border-color: rgba(224, 138, 106, 0.6); }
+
+@keyframes ss-banner-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.ss-floats {
+  position: absolute;
+  top: 28px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ss-float {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  animation: ss-float-up 1600ms ease-out forwards;
+}
+
+.ss-float-up { color: #7fd6a8; }
+.ss-float-down { color: #e2704a; }
+
+@keyframes ss-float-up {
+  0% { opacity: 0; transform: translateY(6px); }
+  15% { opacity: 1; transform: none; }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-18px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-banner, .ss-float { animation: none; }
+}
+
+/* ---------- F3.3 回合提示 ---------- */
+.ss-turn-toast {
+  position: sticky;
+  top: 52px;
+  z-index: 6;
+  justify-self: center;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--ss-accent);
+  color: #101a24;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 8px 20px rgba(232, 194, 106, 0.35);
+  animation: ss-turn-in 320ms ease-out;
+}
+
+@keyframes ss-turn-in {
+  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+
+.ss-board:has(.ss-turn-toast) .ss-band-bottom {
+  box-shadow: 0 0 0 2px var(--ss-accent-soft), 0 -6px 18px rgba(0, 0, 0, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-turn-toast { animation: none; }
+}
