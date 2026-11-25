@@ -10,8 +10,8 @@
 | 项目 | 内容 |
 | --- | --- |
 | 当前阶段 | **F1 视觉系统与元素堆叠** |
-| 当前任务 | F6.1 移动端竖向布局复核 |
-| 最后更新 | 2026-11-25 19:10 |
+| 当前任务 | F7.1 首屏与卡图加载优化 |
+| 最后更新 | 2026-11-25 19:40 |
 | 夜间节奏 | 每天 3 次：23:00 / 01:00 / 04:00（Asia/Shanghai），每次 60–90 分钟 |
 | 验收底线 | `pnpm --filter @bgx/web build` + `pnpm --filter @bgx/web smoke` 全过；涉及 view/引擎字段时加 `pnpm --filter @bgx/server test` |
 | 部署约定 | 前端改动默认只提交不部署；用户明确说“部署”才同步线上 |
@@ -154,9 +154,9 @@
 | F5.1 | CardDetail 浮层 | ⬜ | 50 张卡全可查 |
 | F5.2 | 三种触发方式 | ⬜ | 移动端长按 |
 | F5.3 | 规则摘要面板 | ⬜ | 可折叠 |
-| F6.1 | 响应式布局 | ⬜ | 390px 不溢出 |
-| F6.2 | 触控与对比度 | ⬜ | ≥44px、4.5:1 |
-| F6.3 | ARIA 与键盘 | ⬜ | 日志 aria-live |
+| F6.1 | 响应式布局 | ✅ | ≤720px 顶栏换行、术语按钮靠后；确认条/组牌栏 sticky 且避开 safe-area；手牌横向滚动；详情浮层 86dvh |
+| F6.2 | 触控与对比度 | ✅ | 窄屏按钮 ≥44px、正文 ≥12px；卡牌角标 26px（次要操作）；焦点环全局可见 |
+| F6.3 | ARIA 与键盘 | ✅ | 日志/资源浮字 aria-live；卡牌 Enter/Space 可操作；详情与术语浮层 focus trap + Esc 关闭 + 还原焦点；aria-modal |
 | F7.1 | 动画队列 | ⬜ | 同帧多动画 |
 | F7.2 | 懒加载/memo | ⬜ | 首屏 <100ms |
 | F7.3 | 新手引导 | ⬜ | 首局 3 步 |
@@ -261,3 +261,10 @@
   - 新增 `.ss-card-mini-info` / `.ss-glossary*` / `.ss-glossary-open` 样式；`CardMini` 补 `font: inherit; text-align: left; color: inherit` 以保持原视觉。
   - 验证：`web build` 通过（4.11s）；`smoke` 1187 次渲染全过。
   - 下次从 **F6.1** 开始：移动端竖向布局复核（窄屏下三段带、确认条、组牌 sticky 栏、详情浮层都不遮挡关键操作），再做 F6.2 键盘可达性与焦点环。
+- **2026-11-25 19:15–19:40** 完成 F6.1/F6.2/F6.3。
+  - 发现并修掉一个真 bug：F5.2 的「术语」按钮当时插错了锚点（找的是 `<div className="ss-band ss-band-top">`，实际是 `<header className="… ss-topbar">`），按钮从未渲染，浮层无入口；现已加进顶栏右侧。
+  - 窄屏：顶栏 flex-wrap、术语按钮 `order:9`；`ss-confirm`/`ss-organize-bar` 改为 `position: sticky` + `bottom: calc(6px + env(safe-area-inset-bottom))`；手牌区 `overflow-x:auto` 不换行；浮层 `max-height:86dvh`；顶栏吸顶。
+  - 触控/字号：窄屏 `.ss-button` 最小 44×44；正文类 ≥12px；卡牌角落「?」26px（次要操作，避免遮挡卡面）。
+  - 键盘：`CardTile` 补 `role=button`/`tabIndex`/Enter+Space（原已有一份，本次去重）；新增 `useDialog(onClose)` 统一处理初始聚焦、Tab 循环、Esc 关闭、关闭后还原焦点；`CardDetail`/`Glossary` 均改为 `aria-modal` + focus trap。
+  - 验证：`web build` 通过（4.06s）；`smoke` 1187 次渲染全过。
+  - 下次从 **F7.1** 开始：首屏与卡图加载（卡图 `loading="lazy"` 已有，补 `decoding="async"`、视口外不挂载、`prefers-reduced-motion` 下关闭入场动画），再进 F7.2 性能与收尾检查。

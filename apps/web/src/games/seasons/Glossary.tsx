@@ -1,3 +1,5 @@
+import { useDialog } from './useDialog';
+
 const TERMS: { term: string; text: string }[] = [
   { term: '储备区', text: '存放能量的地方，默认上限 7 点。召唤、激活、晶化都从这里支付；超过上限的能量必须弃掉，或存到带「储备容器」的卡上。' },
   { term: '晶化（Transmute）', text: '支付 1 点能量，换取数量等于当季转换值的水晶（冬 1/1/2/3，春 1/2/3/1，夏 2/3/1/1，秋 3/1/1/2，按水/风/火/土顺序）。只有骰面授予时才可晶化，每回合一次。' },
@@ -11,11 +13,14 @@ const TERMS: { term: string; text: string }[] = [
 
 /** F5.2 术语速查。 */
 export function Glossary({ onClose }: { onClose: () => void }) {
+  const dialogRef = useDialog(onClose);
   return (
     <div className="ss-detail-backdrop" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="ss-detail ss-glossary"
         role="dialog"
+        aria-modal="true"
         aria-label="术语速查"
         onClick={(event) => event.stopPropagation()}
       >
