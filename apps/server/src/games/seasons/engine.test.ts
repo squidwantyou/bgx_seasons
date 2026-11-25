@@ -3377,14 +3377,15 @@ describe('seasons passive summon/season energy', () => {
 });
 
 describe('seasons die of malice', () => {
-  function withMalice(): SeasonsState {
+  function withMalice(count = 1): SeasonsState {
     const base = toPlay(draftAll(setup('malice-seed')));
     const malice = BASE_CARDS.find((card) => card.effect?.typeKey === 'die_of_malice');
     if (!malice) throw new Error('缺少恶意之骰');
+    const played = Array.from({ length: count }, (_, index) => ({ i: malice.id, u: 8300 + index }));
     return {
       ...base,
       players: base.players.map((player, seat) =>
-        seat === 0 ? { ...player, played: [{ i: malice.id, u: 8300 }] } : player,
+        seat === 0 ? { ...player, played } : player,
       ),
     };
   }
@@ -3400,6 +3401,47 @@ describe('seasons die of malice', () => {
     const resolved = apply(allPicked, 0, { type: 'resolve-choice', choice: { id: 'normal' } });
     expect(resolved.pendingChoice).toBeNull();
     expect(resolved.log.some((entry) => entry.msg.includes('骰子效果'))).toBe(true);
+  });
+
+  it('场上有 2 张恶意之骰：可重掷 2 次，中途可放弃', () => {
+    const state = withMalice(2);
+    const picked = apply(state, 0, { type: 'draft-dice', dieIndex: 0 });
+    const allPicked = apply(picked, 1, { type: 'draft-dice', dieIndex: 1 });
+    expect(allPicked.pendingChoice?.key).toBe('die_of_malice');
+    expect(allPicked.pendingChoice?.options.remaining).toBe(2);
+    const first = apply(allPicked, 0, { type: 'resolve-choice', choice: { id: 'alternative' } });
+    expect(first.players[0]!.crystals).toBe(allPicked.players[0]!.crystals + 2);
+    expect(first.pendingChoice?.options.remaining).toBe(1);
+    expect(first.log.filter((entry) => entry.msg.includes('恶意之骰')).length).toBe(1);
+    // 放弃第二次：不再给水晶，直接结算骰面。
+    const stopped = apply(first, 0, { type: 'resolve-choice', choice: { id: 'normal' } });
+    expect(stopped.pendingChoice).toBeNull();
+    expect(stopped.players[0]!.crystals).toBe(first.players[0]!.crystals);
+    expect(stopped.log.some((entry) => entry.msg.includes('骰子效果'))).toBe(true);
+  });
+
+  it('连续重掷两次：每次 +2 水晶，结束后只结算一次骰面', () => {
+    const state = withMalice(2);
+    const picked = apply(state, 0, { type: 'draft-dice', dieIndex: 0 });
+    const allPicked = apply(picked, 1, { type: 'draft-dice', dieIndex: 1 });
+    const before = allPicked.players[0]!.crystals;
+    const first = apply(allPicked, 0, { type: 'resolve-choice', choice: { id: 'alternative' } });
+    const second = apply(first, 0, { type: 'resolve-choice', choice: { id: 'alternative' } });
+    expect(second.pendingChoice).toBeNull();
+    // 两次重掷各 +2；最终骰面若带水晶奖励再叠加一次。
+    const dieCrystals = second.season?.dice.find((die) => die.pickedBy === 0)?.rewards.crystals ?? 0;
+    expect(second.players[0]!.crystals).toBe(before + 4 + dieCrystals);
+    expect(second.log.filter((entry) => entry.msg.includes('骰子效果')).length).toBe(1);
+  });
+
+  it('第一张恶意之骰直接放弃：剩余次数一并跳过', () => {
+    const state = withMalice(3);
+    const picked = apply(state, 0, { type: 'draft-dice', dieIndex: 0 });
+    const allPicked = apply(picked, 1, { type: 'draft-dice', dieIndex: 1 });
+    const before = allPicked.players[0]!.crystals;
+    const stopped = apply(allPicked, 0, { type: 'resolve-choice', choice: { id: 'normal' } });
+    expect(stopped.pendingChoice).toBeNull();
+    expect(stopped.players[0]!.crystals).toBe(before);
   });
 
   it('选重掷：水晶 +2 且按新骰面结算奖励', () => {
