@@ -54,6 +54,58 @@ function cardCost(id: number): string {
     .join(' ');
 }
 
+
+/** 储备 = 储备区 + 非封印卡上的能量（与引擎一致，供前端可支付性判断）。 */
+function reserveOf(player: SeasonsPlayerView): Record<Element, number> {
+  const total: Record<Element, number> = { water: 0, air: 0, fire: 0, earth: 0 };
+  for (const element of ELEMENTS) total[element] = player.energies[element];
+  for (const card of player.played) {
+    const def = CARD_BY_ID.get(card.i);
+    const sealed = def?.effect?.abilities?.some((ability) => ability.kind === 'sealed_energy');
+    if (sealed) continue;
+    const stored = (card as { stored?: Partial<Record<Element, number>> }).stored;
+    if (!stored) continue;
+    for (const element of ELEMENTS) total[element] += stored[element] ?? 0;
+  }
+  return total;
+}
+
+/** 返回无法召唤的原因（null = 可以支付）。 */
+function summonBlockReason(
+  player: SeasonsPlayerView,
+  cardId: number,
+  playerCount: number,
+): string | null {
+  const def = CARD_BY_ID.get(cardId);
+  if (!def) return '未知卡牌';
+  if (player.gauge <= player.played.length) return '召唤位已满';
+  const reserve = reserveOf(player);
+  if (def.costFlexible) {
+    const { min, max, maxPerType } = def.costFlexible;
+    let kinds = 0;
+    let amount = 0;
+    for (const element of ELEMENTS) {
+      const take = Math.min(reserve[element], maxPerType ?? 1);
+      if (take > 0) {
+        kinds += 1;
+        amount += take;
+      }
+    }
+    if (kinds < min || amount < min) return '能量不足';
+    return null;
+  }
+  const byPlayers = def.costByPlayers as
+    | Partial<Record<string, Partial<typeof def.cost>>>
+    | undefined;
+  const cost = { ...def.cost, ...(byPlayers?.[String(playerCount)] ?? {}) };
+  let missing = false;
+  for (const element of ELEMENTS) {
+    if (reserve[element] < (cost[element] ?? 0)) missing = true;
+  }
+  if ((cost.crystal ?? 0) > player.crystals) return '水晶不足';
+  return missing ? '能量不足' : null;
+}
+
 function isFlexCard(id: number): boolean {
   return Boolean(CARD_BY_ID.get(id)?.costFlexible);
 }
@@ -358,21 +410,26 @@ function MyZone({
       <h3>手牌 {player.hand ? `· ${player.hand.length} 张` : ''}{canAct ? ' · 点一张牌召唤' : ''}</h3>
       <div className="ss-hand-cards">
         {player.hand && player.hand.length > 0 ? (
-          player.hand.map((card) => (
-            <CardTile
-              key={card.u}
-              card={card}
-              hint={isFlexCard(card.i) ? '选择支付后召唤' : '点击召唤'}
-              onClick={
-                canAct
-                  ? () =>
-                      isFlexCard(card.i)
-                        ? onFlexSummon(card.u)
-                        : onSend({ type: 'summon', cardUid: card.u })
-                  : undefined
-              }
-            />
-          ))
+          player.hand.map((card) => {
+            const reason = summonBlockReason(player, card.i, game.players.length);
+            const blocked = canAct && reason !== null;
+            return (
+              <CardTile
+                key={card.u}
+                card={card}
+                disabled={blocked}
+                hint={reason ?? (isFlexCard(card.i) ? '选择支付后召唤' : '点击召唤')}
+                onClick={
+                  canAct && reason === null
+                    ? () =>
+                        isFlexCard(card.i)
+                          ? onFlexSummon(card.u)
+                          : onSend({ type: 'summon', cardUid: card.u })
+                    : undefined
+                }
+              />
+            );
+          })
         ) : (
           <span className="ss-muted">没有手牌</span>
         )}
@@ -445,29 +502,62 @@ function DicePool({
 }) {
   if (game.dice.length === 0) return null;
   const pickable = canAct && game.phase === 'play' && game.turnOwner === null;
+  const remaining = game.dice.filter((die) => die.pickedBy === null).length;
   return (
-    <section className="ss-dice" aria-label="本月骰子">
-      {game.dice.map((die, index) => {
-        const art = dieArt(die.letter, die.id, die.face);
-        return (
-          <figure
-            className={`ss-die${die.pickedBy !== null ? ' ss-die-picked' : ''}${pickable && die.pickedBy === null ? ' ss-die-clickable' : ''}`}
-            key={die.id}
-            onClick={pickable && die.pickedBy === null ? () => onSend({ type: 'draft-dice', dieIndex: index }) : undefined}
-          >
-            {art ? (
-              <img src={art} alt={`骰子 ${die.pip} 点`} draggable={false} />
-            ) : (
-              <div className="ss-die-missing">{die.pip}</div>
-            )}
-            <figcaption>
-              {die.pip} 点
-              {die.pickedBy !== null ? ` · 座位 ${die.pickedBy + 1}` : ''}
-            </figcaption>
-            <RewardLine die={die} />
-          </figure>
-        );
-      })}
+    <section className="ss-dice-band" aria-label="本月骰子">
+      <div className="ss-dice-head">
+        <span className="ss-dice-title">本月骰池</span>
+        <span className="ss-muted">
+          {pickable
+            ? remaining > 0
+              ? `点击选择一颗骰子（剩 ${remaining} 颗）`
+              : '骰子已选完'
+            : game.dice.every((die) => die.pickedBy !== null)
+              ? '按选择顺序行动'
+              : '等待其他玩家选骰'}
+        </span>
+      </div>
+      <div className="ss-dice" key={`${game.year}-${game.seasonIdx}-${game.month}`}>
+        {game.dice.map((die, index) => {
+          const art = dieArt(die.letter, die.id, die.face);
+          const picked = die.pickedBy !== null;
+          const seatColor = picked ? SEAT_COLORS[(die.pickedBy as number) % SEAT_COLORS.length] : undefined;
+          return (
+            <figure
+              className={[
+                'ss-die',
+                picked ? 'ss-die-picked' : '',
+                pickable && !picked ? 'ss-die-clickable' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              key={die.id}
+              style={{ animationDelay: `${index * 45}ms` }}
+              onClick={pickable && !picked ? () => onSend({ type: 'draft-dice', dieIndex: index }) : undefined}
+            >
+              {art ? (
+                <img
+                  src={art}
+                  alt={`骰子 ${die.pip} 点`}
+                  draggable={false}
+                  style={seatColor ? { borderColor: seatColor } : undefined}
+                />
+              ) : (
+                <div className="ss-die-missing">{die.pip}</div>
+              )}
+              <figcaption>
+                {die.pip} 点
+                {picked ? (
+                  <span className="ss-die-owner" style={{ color: seatColor }}>
+                    座位 {(die.pickedBy as number) + 1}
+                  </span>
+                ) : null}
+              </figcaption>
+              <RewardLine die={die} />
+            </figure>
+          );
+        })}
+      </div>
     </section>
   );
 }
