@@ -20,6 +20,7 @@
   - 改动通常两边一起提交；`bgx` 里 submodule 指针要跟着前滚
 
 线上：`https://thinktwice.top/bgx/`（Apache 静态 + `bgx.service`，端口 8787，`/bgx/api` 反代）
+当前线上版本：2026-11-25 14:25 部署的 F1–F7 前端版（含卡牌详情、组牌确认、移动端适配）。
 
 ---
 
