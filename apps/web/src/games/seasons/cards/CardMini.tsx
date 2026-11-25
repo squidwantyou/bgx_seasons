@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { CARD_BY_ID } from '@bgx/protocol/games/seasons-cards-all';
 import type { SeasonsCardView } from '@bgx/protocol/games/seasons';
 import { cardArt } from '../art';
@@ -23,6 +24,14 @@ export function CardMini({
   selected?: boolean;
   fresh?: boolean;
 }) {
+  const longPress = useRef<number | null>(null);
+  const suppressClick = useRef(false);
+  const cancelLongPress = () => {
+    if (longPress.current !== null) {
+      window.clearTimeout(longPress.current);
+      longPress.current = null;
+    }
+  };
   const name = nameOf(card.i);
   const art = cardArt(card.i);
   const interactive = Boolean(onClick);
@@ -43,7 +52,28 @@ export function CardMini({
         .join(' ')}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
-      onClick={interactive ? onClick : undefined}
+      onTouchStart={() => {
+        if (!onInspect) return;
+        cancelLongPress();
+        longPress.current = window.setTimeout(() => {
+          suppressClick.current = true;
+          onInspect(card.i);
+        }, 500);
+      }}
+      onTouchEnd={cancelLongPress}
+      onTouchMove={cancelLongPress}
+      onTouchCancel={cancelLongPress}
+      onContextMenu={(event) => {
+        if (onInspect) event.preventDefault();
+      }}
+      onClick={(event) => {
+        if (suppressClick.current) {
+          suppressClick.current = false;
+          event.preventDefault();
+          return;
+        }
+        if (interactive) onClick?.();
+      }}
       onKeyDown={(event) => {
         if (!interactive) return;
         if (event.key === 'Enter' || event.key === ' ') {

@@ -162,11 +162,13 @@ try {
     return result.state;
   };
 
+  const durs = [];
   const renderState = (state, where) => {
     if (state.pendingChoice) pendingSeen.add(state.pendingChoice.kind);
     for (const seat of [0, 1, null]) {
       const view = makeView(state, seat);
       try {
+        const started = performance.now();
         const html = renderToStaticMarkup(
           createElement(Panel, {
             view,
@@ -175,6 +177,7 @@ try {
             onAction: () => {},
           }),
         );
+        durs.push(performance.now() - started);
         if (!html.includes('ss-board')) throw new Error('Panel 输出缺少 ss-board 根节点');
         if (seat === 0) {
           for (const marker of ['术语', 'ss-band-top', 'ss-band-bottom']) {
@@ -301,6 +304,13 @@ try {
     pendingSeen.add(pending.kind);
   }
 
+  durs.sort((a, b) => a - b);
+  const avg = durs.reduce((sum, value) => sum + value, 0) / Math.max(1, durs.length);
+  const p95 = durs[Math.floor(durs.length * 0.95)] ?? 0;
+  if (avg > 6) {
+    throw new Error(`SSR 单次渲染平均 ${avg.toFixed(2)}ms，超过 6ms 预算（本地 SSR 基线约 3ms）`);
+  }
+  console.log(`SSR 渲染耗时：平均 ${avg.toFixed(3)}ms，p95 ${p95.toFixed(3)}ms，样本 ${durs.length}`);
   console.log(`OK 渲染冒烟：${renders} 次渲染，覆盖弹窗 ${[...pendingSeen].sort().join('/') || '无'}`);
   if (warnings.length > 0) {
     console.error(`注意：React 输出 ${warnings.length} 条 console.error（可能是 key 警告）：`);
