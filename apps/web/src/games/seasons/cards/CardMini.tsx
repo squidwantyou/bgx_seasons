@@ -13,11 +13,13 @@ export function CardMini({
   hint,
   onClick,
   selected = false,
+  fresh = false,
 }: {
   card: SeasonsCardView;
   hint?: string;
   onClick?: () => void;
   selected?: boolean;
+  fresh?: boolean;
 }) {
   const name = nameOf(card.i);
   const art = cardArt(card.i);
@@ -29,6 +31,7 @@ export function CardMini({
       className={[
         'ss-card-mini',
         selected ? 'ss-card-mini-selected' : '',
+        fresh ? 'ss-card-mini-fresh' : '',
         interactive ? 'ss-card-mini-clickable' : '',
       ]
         .filter(Boolean)

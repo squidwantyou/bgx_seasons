@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChoiceModal } from './ChoiceModal';
 import { CARD_BY_ID } from '@bgx/protocol/games/seasons-cards-all';
 import {
@@ -144,11 +144,15 @@ function PlayerBlock({
   player,
   label,
   active = false,
+  compact = false,
+  highlightUids,
   onPlayedClick,
 }: {
   player: SeasonsPlayerView;
   label: string;
   active?: boolean;
+  compact?: boolean;
+  highlightUids?: Set<number>;
   onPlayedClick?: (uid: number) => void;
 }) {
   const seatColor = SEAT_COLORS[player.seat % SEAT_COLORS.length];
@@ -174,7 +178,19 @@ function PlayerBlock({
         {player.draftHandCount > 0 && <span className="ss-stat">🃏 轮抽 {player.draftHandCount} 张</span>}
         {player.organizeDone && <span className="ss-stat">✅ 已组牌</span>}
       </header>
-      <EnergyRow player={player} />
+      {compact ? (
+        <div className="ss-player-line">
+          <span className="ss-stat" title="水晶">💎 {player.crystals}</span>
+          <span className="ss-stat" title="召唤等级">⚡ {player.gauge}</span>
+          <span className="ss-stat" title="手牌">✋ {player.handCount}</span>
+          <span className="ss-stat" title="场上卡牌">🃏 {player.played.length}</span>
+          {player.badgesUsed > 0 && <span className="ss-stat">🎖 {player.badgesUsed}</span>}
+          {player.draftHandCount > 0 && <span className="ss-stat">轮抽 {player.draftHandCount}</span>}
+        </div>
+      ) : (
+        <EnergyRow player={player} />
+      )}
+      {!compact && (
       <div className="ss-piles">
         <CardPile
           count={player.libraryCount}
@@ -183,6 +199,7 @@ function PlayerBlock({
           accent={seatColor}
         />
       </div>
+      )}
       <div className="ss-played">
         {player.played.length === 0 ? (
           <span className="ss-muted">场上还没有牌</span>
@@ -191,6 +208,7 @@ function PlayerBlock({
             <CardMini
               key={card.u}
               card={card}
+              fresh={highlightUids?.has(card.u)}
               hint={card.used ? '本回合已激活' : onPlayedClick ? '点击激活' : undefined}
               onClick={onPlayedClick && !card.used ? () => onPlayedClick(card.u) : undefined}
             />
@@ -585,6 +603,24 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   const me = mySeat === null ? null : (game.players.find((player) => player.seat === mySeat) ?? null);
   const opponents = game.players.filter((player) => player.seat !== mySeat);
   const [paying, setPaying] = useState<{ uid: number; cardId: number } | null>(null);
+  const prevPlayed = useRef<Map<number, Set<number>>>(new Map());
+  const [fresh, setFresh] = useState<Map<number, Set<number>>>(new Map());
+  useEffect(() => {
+    const nextPlays = new Map<number, Set<number>>();
+    const freshPlays = new Map<number, Set<number>>();
+    for (const player of game.players) {
+      const before = prevPlayed.current.get(player.seat) ?? new Set<number>();
+      const added = new Set(player.played.map((card) => card.u).filter((uid) => !before.has(uid)));
+      if (added.size > 0) freshPlays.set(player.seat, added);
+      nextPlays.set(player.seat, new Set(player.played.map((card) => card.u)));
+    }
+    prevPlayed.current = nextPlays;
+    if (freshPlays.size > 0) {
+      setFresh(freshPlays);
+      const timer = window.setTimeout(() => setFresh(new Map()), 1500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [game.players]);
   const hasChoice = game.pendingChoice !== null;
   const hasBadgeDraw = (me?.badgeDraw?.length ?? 0) > 0;
   const canAct = !disabled && view.status === 'active' && game.myTurn && !hasChoice && !hasBadgeDraw;
@@ -596,7 +632,9 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   return (
     <div className="ss-board">
       <header className="ss-band ss-band-top ss-topbar">
-        <span className={`ss-phase ss-phase-${game.phase}`}>{PHASE_NAME[game.phase] ?? game.phase}</span>
+        <span key={game.phase} className={`ss-phase ss-phase-${game.phase} ss-phase-pop`}>
+          {PHASE_NAME[game.phase] ?? game.phase}
+        </span>
         <span className="ss-meta">
           第 {game.year} 年 · {game.season?.name ?? '筹备中'} · 第 {game.month + 1} 月
         </span>
@@ -631,6 +669,8 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
                   ? player.seat === game.currentPicker
                   : game.turnOwner === player.seat
               }
+              compact
+              highlightUids={fresh.get(player.seat)}
             />
           ))}
         </div>
@@ -642,6 +682,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
             player={me}
             label={`座位 ${me.seat + 1}`}
             active={game.myTurn}
+            highlightUids={fresh.get(me.seat)}
             onPlayedClick={canAct ? (uid) => send({ type: 'activate', cardUid: uid }) : undefined}
           />
         ) : (

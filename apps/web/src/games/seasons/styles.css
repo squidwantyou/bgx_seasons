@@ -724,3 +724,72 @@
 .ss-player-head strong {
   color: var(--ss-seat, var(--ss-text));
 }
+
+/* ---------- F2.2 紧凑对手区 + F3.1 行动反馈 ---------- */
+.ss-player-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 0 8px;
+  color: var(--ss-muted);
+  font-size: 12px;
+}
+
+.ss-player-line .ss-stat { color: var(--ss-text); }
+
+.ss-card-mini-fresh {
+  animation: ss-card-in 700ms ease-out;
+  border-color: var(--ss-accent);
+}
+
+@keyframes ss-card-in {
+  from {
+    transform: translateY(8px) scale(0.96);
+    box-shadow: 0 0 0 0 rgba(232, 194, 106, 0.65);
+    opacity: 0.4;
+  }
+  60% {
+    box-shadow: 0 0 0 6px rgba(232, 194, 106, 0.18);
+  }
+  to {
+    transform: none;
+    box-shadow: 0 0 0 0 rgba(232, 194, 106, 0);
+    opacity: 1;
+  }
+}
+
+.ss-log li:last-child {
+  animation: ss-log-in 900ms ease-out;
+}
+
+@keyframes ss-log-in {
+  from {
+    background: var(--ss-accent-soft);
+    transform: translateX(-4px);
+  }
+  to {
+    background: transparent;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-card-mini-fresh,
+  .ss-log li:last-child {
+    animation: none;
+  }
+}
+
+.ss-opponents .ss-card-mini img { width: 28px; height: 39px; }
+.ss-opponents .ss-card-mini-name { max-width: 86px; font-size: 11px; }
+
+.ss-phase-pop { animation: ss-phase-pop 450ms ease-out; }
+
+@keyframes ss-phase-pop {
+  from { transform: scale(0.9); box-shadow: 0 0 0 8px rgba(232, 194, 106, 0.2); }
+  to { transform: none; box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-phase-pop { animation: none; }
+}
