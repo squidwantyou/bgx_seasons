@@ -355,3 +355,261 @@
   .ss-card-clickable:hover img,
   .ss-die-clickable:hover img { outline-width: 2px; transition: none; }
 }
+
+/* ---------- F1.3 卡牌三形态 ---------- */
+.ss-card-tile {
+  position: relative;
+  width: var(--ss-card-w);
+  margin: 0;
+  border-radius: var(--ss-radius-md);
+  background: var(--ss-surface-2);
+  border: 1px solid var(--ss-line);
+  overflow: hidden;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.ss-card-tile-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 455 / 634;
+  object-fit: cover;
+  background: #0c141c;
+}
+
+.ss-card-missing {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 455 / 634;
+  padding: 6px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--ss-muted);
+  background: repeating-linear-gradient(45deg, #18222e, #18222e 8px, #1c2836 8px, #1c2836 16px);
+}
+
+.ss-card-tile-points {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid var(--ss-line-strong);
+  color: var(--ss-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ss-card-tile .ss-element-cost {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 2px 4px;
+  border-radius: var(--ss-radius-sm);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.ss-element-cost {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.ss-element-cost-crystal {
+  font-size: 11px;
+  color: var(--ss-accent);
+}
+
+.ss-card-tile-foot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px 6px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.ss-card-tile-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ss-card-tile-tag {
+  font-size: 10px;
+  color: var(--ss-accent);
+  background: var(--ss-accent-soft);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.ss-card-tile-clickable { cursor: pointer; }
+.ss-card-tile-clickable:hover,
+.ss-card-tile-clickable:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+  border-color: var(--ss-line-strong);
+  outline: none;
+}
+
+.ss-card-tile-selected {
+  border-color: var(--ss-accent);
+  box-shadow: 0 0 0 2px var(--ss-accent-soft);
+}
+
+.ss-card-tile-disabled { opacity: 0.55; }
+
+.ss-card-tile-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 26px;
+  padding: 2px 0;
+  font-size: 11px;
+  text-align: center;
+  color: #101a24;
+  background: var(--ss-accent);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.ss-card-tile-clickable:hover .ss-card-tile-hint,
+.ss-card-tile-clickable:focus-visible .ss-card-tile-hint { opacity: 0.95; }
+
+/* 场上小卡 */
+.ss-card-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border-radius: var(--ss-radius-md);
+  background: var(--ss-surface);
+  border: 1px solid var(--ss-line);
+  color: var(--ss-text);
+  text-align: left;
+  font: inherit;
+}
+
+.ss-card-mini img {
+  width: 34px;
+  height: 47px;
+  border-radius: var(--ss-radius-sm);
+  object-fit: cover;
+  flex: none;
+}
+
+.ss-card-mini-missing {
+  width: 34px;
+  height: 47px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  border-radius: var(--ss-radius-sm);
+  background: var(--ss-surface-2);
+}
+
+.ss-card-mini-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ss-card-mini-name {
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ss-card-mini-meta { font-size: 10px; color: var(--ss-muted); }
+
+.ss-card-mini-stored {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+}
+
+.ss-card-mini-clickable { cursor: pointer; }
+.ss-card-mini-clickable:hover,
+.ss-card-mini-clickable:focus-visible {
+  border-color: var(--ss-accent);
+  outline: none;
+}
+
+.ss-card-mini-selected {
+  border-color: var(--ss-accent);
+  background: var(--ss-accent-soft);
+}
+
+/* 牌堆 / 牌库 / 弃牌堆 */
+.ss-counts {
+  display: inline-flex;
+  gap: var(--ss-space-4);
+  align-items: center;
+  margin-left: auto;
+}
+
+.ss-piles { display: flex; gap: var(--ss-space-4); align-items: center; }
+
+.ss-pile {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ss-muted);
+}
+
+.ss-pile-stack {
+  position: relative;
+  width: 34px;
+  height: 46px;
+  display: inline-block;
+}
+
+.ss-pile-back {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--ss-radius-sm);
+  border: 1px solid var(--ss-line-strong);
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg, #2c3f56, #16222f);
+}
+
+.ss-pile-back-3 { transform: translate(4px, -4px); opacity: 0.5; }
+.ss-pile-back-2 { transform: translate(2px, -2px); opacity: 0.75; }
+.ss-pile-back-1 { display: grid; place-items: center; }
+
+.ss-pile-count {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ss-text);
+  text-shadow: 0 1px 2px #000;
+}
+
+.ss-pile-discard .ss-pile-back {
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg, #3a2f2f, #1d1717);
+  border-color: rgba(226, 112, 74, 0.5);
+}
+
+.ss-pile-library .ss-pile-back {
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg, #2f4a3a, #16231b);
+}
+
+.ss-pile-empty { opacity: 0.45; }

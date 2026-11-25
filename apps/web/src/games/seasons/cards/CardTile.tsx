@@ -1,0 +1,71 @@
+import { CARD_BY_ID } from '@bgx/protocol/games/seasons-cards-all';
+import type { SeasonsCardView } from '@bgx/protocol/games/seasons';
+import { cardArt } from '../art';
+import { ElementCost } from '../energy/ElementStack';
+
+function nameOf(id: number): string {
+  return CARD_BY_ID.get(id)?.nameZh ?? `卡牌 #${id}`;
+}
+
+/**
+ * 手牌/牌堆正面的“大卡”：卡图 + 费用堆叠 + 名称 + 分数。
+ * 手牌统一用这个尺寸，点击可抬升；场上与牌堆用 CardMini / CardPile。
+ */
+export function CardTile({
+  card,
+  selected = false,
+  disabled = false,
+  hint,
+  tag,
+  onClick,
+}: {
+  card: SeasonsCardView;
+  selected?: boolean;
+  disabled?: boolean;
+  hint?: string;
+  tag?: string;
+  onClick?: () => void;
+}) {
+  const def = CARD_BY_ID.get(card.i);
+  const name = nameOf(card.i);
+  const art = cardArt(card.i);
+  const cost = def?.cost;
+  const interactive = Boolean(onClick) && !disabled;
+  return (
+    <figure
+      className={[
+        'ss-card-tile',
+        selected ? 'ss-card-tile-selected' : '',
+        interactive ? 'ss-card-tile-clickable' : '',
+        disabled ? 'ss-card-tile-disabled' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      title={`${name}${hint ? ` · ${hint}` : ''}`}
+      onClick={interactive ? onClick : undefined}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (!interactive) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
+    >
+      {art ? (
+        <img className="ss-card-tile-art" src={art} alt={name} loading="lazy" draggable={false} />
+      ) : (
+        <div className="ss-card-missing">{name}</div>
+      )}
+      <span className="ss-card-tile-points">{def?.points ?? 0}</span>
+      {cost && <ElementCost counts={cost} crystal={cost.crystal} />}
+      <figcaption className="ss-card-tile-foot">
+        <span className="ss-card-tile-name">{name}</span>
+        {tag && <span className="ss-card-tile-tag">{tag}</span>}
+      </figcaption>
+      {card.used && <span className="ss-card-used">已激活</span>}
+      {hint && interactive && <span className="ss-card-tile-hint">{hint}</span>}
+    </figure>
+  );
+}

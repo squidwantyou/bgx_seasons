@@ -10,8 +10,11 @@ import {
 } from '@bgx/protocol/games/seasons';
 import type { SeasonsAction } from '@bgx/protocol/games/seasons';
 import type { GamePanelProps } from '../types';
-import { cardArt, dieArt } from './art';
+import { dieArt } from './art';
 import { ElementChoice, ElementPips, ElementRow } from './energy/ElementStack';
+import { CardMini } from './cards/CardMini';
+import { CardPile } from './cards/CardPile';
+import { CardTile } from './cards/CardTile';
 import './styles.css';
 
 const ELEMENT_NAME: Record<Element, string> = {
@@ -124,51 +127,6 @@ function PaymentModal({
   );
 }
 
-function CardChip({
-  card,
-  compact = false,
-  onClick,
-  selected = false,
-  hint,
-}: {
-  card: SeasonsCardView;
-  compact?: boolean;
-  onClick?: () => void;
-  selected?: boolean;
-  hint?: string;
-}) {
-  const art = cardArt(card.i);
-  const name = cardName(card.i);
-  const cost = cardCost(card.i);
-  return (
-    <figure
-      className={`ss-card${compact ? ' ss-card-compact' : ''}${selected ? ' ss-card-selected' : ''}${onClick ? ' ss-card-clickable' : ''}`}
-      title={`${name}${cost ? ` · ${cost}` : ''}${hint ? ` · ${hint}` : ''}`}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={(event) => {
-        if (!onClick) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
-        }
-      }}
-    >
-      {art ? (
-        <img src={art} alt={name} loading="lazy" draggable={false} />
-      ) : (
-        <div className="ss-card-missing">{name}</div>
-      )}
-      <figcaption>
-        <span className="ss-card-name">{name}</span>
-        {!compact && <span className="ss-card-cost">{cost}</span>}
-      </figcaption>
-      {card.used && <span className="ss-card-used">已激活</span>}
-    </figure>
-  );
-}
-
 function EnergyRow({ player }: { player: SeasonsPlayerView }) {
   return (
     <div className="ss-energies" aria-label="能量储备">
@@ -200,9 +158,6 @@ function PlayerBlock({
         <span className="ss-stat" title="召唤等级">
           ⚡ 等级 {player.gauge}
         </span>
-        <span className="ss-stat" title="第 2、3 年牌库">
-          🂠 牌库 {player.libraryCount}
-        </span>
         <span className="ss-stat" title="手牌数">
           ✋ {player.handCount}
         </span>
@@ -211,15 +166,17 @@ function PlayerBlock({
         {player.organizeDone && <span className="ss-stat">✅ 已组牌</span>}
       </header>
       <EnergyRow player={player} />
+      <div className="ss-piles">
+        <CardPile count={player.libraryCount} label="牌库（第 2、3 年）" kind="library" />
+      </div>
       <div className="ss-played">
         {player.played.length === 0 ? (
           <span className="ss-muted">场上还没有牌</span>
         ) : (
           player.played.map((card) => (
-            <CardChip
+            <CardMini
               key={card.u}
               card={card}
-              compact
               hint={card.used ? '本回合已激活' : onPlayedClick ? '点击激活' : undefined}
               onClick={onPlayedClick && !card.used ? () => onPlayedClick(card.u) : undefined}
             />
@@ -274,9 +231,10 @@ function MyZone({
         </h3>
         <div className="ss-hand-cards">
           {player.draftHand.map((card) => (
-            <CardChip
+            <CardTile
               key={card.u}
               card={card}
+              hint={canAct ? '点击选中' : undefined}
               onClick={canAct ? () => onSend({ type: 'draft-pick', cardUid: card.u }) : undefined}
             />
           ))}
@@ -311,11 +269,12 @@ function MyZone({
           {player.drafted.map((card) => {
             const belongs = year1.includes(card.u) ? '第 1 年' : year2.includes(card.u) ? '第 2 年' : undefined;
             return (
-              <CardChip
+              <CardTile
                 key={card.u}
                 card={card}
-                compact={Boolean(belongs)}
                 selected={picked.includes(card.u)}
+                tag={belongs}
+                disabled={Boolean(belongs)}
                 hint={belongs ?? (canAct ? '点击选中' : undefined)}
                 onClick={
                   canAct && !player.organizeDone && !belongs ? () => toggle(card.u) : undefined
@@ -344,10 +303,10 @@ function MyZone({
       <div className="ss-hand-cards">
         {player.hand && player.hand.length > 0 ? (
           player.hand.map((card) => (
-            <CardChip
+            <CardTile
               key={card.u}
               card={card}
-              hint={isFlexCard(card.i) ? '选择支付后召唤' : undefined}
+              hint={isFlexCard(card.i) ? '选择支付后召唤' : '点击召唤'}
               onClick={
                 canAct
                   ? () =>
@@ -391,7 +350,8 @@ function PlayActions({
               onClick={() => onSend({ type: 'transmute', element })}
               title={`${ELEMENT_NAME[element]} → ${value} 水晶`}
             >
-              {ELEMENT_NAME[element]} +{value}
+              <ElementChoice element={element} count={1} />
+              <span className="ss-muted">+{value}</span>
             </button>
           ))}
         </div>
@@ -598,15 +558,7 @@ function BadgeKeepModal({ cards, onKeep }: { cards: SeasonsCardView[]; onKeep: (
         <p className="ss-muted">选中的牌进入手牌，另一张进弃牌堆。</p>
         <div className="ss-badge-keep-row">
           {cards.map((card) => (
-            <button
-              key={card.u}
-              type="button"
-              className="ss-badge-keep-card"
-              onClick={() => onKeep(card.u)}
-            >
-              {cardArt(card.i) ? <img src={cardArt(card.i)!} alt="" /> : <span>{card.i}</span>}
-              <span>{CARD_BY_ID.get(card.i)?.nameZh ?? `#${card.i}`}</span>
-            </button>
+            <CardTile key={card.u} card={card} hint="点击保留" onClick={() => onKeep(card.u)} />
           ))}
         </div>
       </div>
@@ -635,7 +587,8 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
           第 {game.year} 年 · {game.season?.name ?? '筹备中'} · 第 {game.month + 1} 月
         </span>
         <span className="ss-counts">
-          牌堆 {game.deckCount} · 弃牌 {game.discardCount}
+          <CardPile count={game.deckCount} label="牌堆" kind="deck" />
+          <CardPile count={game.discardCount} label="弃牌" kind="discard" />
         </span>
       </header>
 
