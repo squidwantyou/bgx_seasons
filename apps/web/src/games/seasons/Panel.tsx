@@ -10,7 +10,8 @@ import {
 } from '@bgx/protocol/games/seasons';
 import type { SeasonsAction } from '@bgx/protocol/games/seasons';
 import type { GamePanelProps } from '../types';
-import { cardArt, dieArt, elementArt } from './art';
+import { cardArt, dieArt } from './art';
+import { ElementChoice, ElementPips, ElementRow } from './energy/ElementStack';
 import './styles.css';
 
 const ELEMENT_NAME: Record<Element, string> = {
@@ -92,15 +93,15 @@ function PaymentModal({
         <div className="ss-alloc">
           {ELEMENTS.map((element) => (
             <div className="ss-alloc-row" key={element}>
-              <span>{ELEMENT_NAME[element]}</span>
-              <b>{player.energies[element]}</b>
+              <ElementChoice element={element} count={player.energies[element]} selected={countOf(element) > 0} />
+              <ElementPips element={element} count={countOf(element)} size="sm" showEmpty />
               <button
                 type="button"
                 className="ss-button"
                 disabled={player.energies[element] < countOf(element) + 1}
                 onClick={() => toggle(element)}
               >
-                {countOf(element) > 0 ? `已付 ${countOf(element)}` : '支付'}
+                支付
               </button>
             </div>
           ))}
@@ -171,16 +172,10 @@ function CardChip({
 function EnergyRow({ player }: { player: SeasonsPlayerView }) {
   return (
     <div className="ss-energies" aria-label="能量储备">
-      {ELEMENTS.map((element) => {
-        const icon = elementArt(element);
-        return (
-          <span className="ss-energy" key={element} title={`${ELEMENT_NAME[element]}能量 ${player.energies[element]}`}>
-            {icon ? <img src={icon} alt={ELEMENT_NAME[element]} draggable={false} /> : null}
-            <b>{player.energies[element]}</b>
-          </span>
-        );
-      })}
-      <span className="ss-energy-total">上限 {player.maxEnergy}</span>
+      <ElementRow counts={player.energies} label="能量储备" />
+      <span className="ss-energy-total" title="元素储备上限">
+        <ElementPips element="water" count={0} size="sm" />上限 {player.maxEnergy}
+      </span>
     </div>
   );
 }
@@ -562,7 +557,7 @@ function BadgeBar({
               onClick={() => clickSwap(element)}
               title={`${ELEMENT_NAME[element]}（现有 ${player.energies[element]}）`}
             >
-              {ELEMENT_NAME[element]}
+              <ElementChoice element={element} count={player.energies[element]} />
             </button>
           ))}
           <button type="button" className="ss-button ss-button-ghost" onClick={reset}>
@@ -583,7 +578,7 @@ function BadgeBar({
                 reset();
               }}
             >
-              {ELEMENT_NAME[element]}
+              <ElementChoice element={element} count={player.energies[element]} />
             </button>
           ))}
           <button type="button" className="ss-button ss-button-ghost" onClick={reset}>
