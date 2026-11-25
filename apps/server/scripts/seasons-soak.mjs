@@ -12,7 +12,8 @@ const PLAYERS = Number(process.argv[3] ?? 2);
 // 用 customDeck 入池，验证「任意卡池都能开局并打完」。
 const POOL_ARG = process.argv[4] ?? '0';
 // 第 4 参数也接受预设卡池名（如 five_fortunes）；否则按随机池大小处理。
-const PRESET_POOL = POOL_ARG === 'five_fortunes' ? POOL_ARG : null;
+const PRESET_POOL =
+  POOL_ARG === 'five_fortunes' || POOL_ARG === 'dice_season' ? POOL_ARG : null;
 const POOL_SIZE = PRESET_POOL ? 0 : Number(POOL_ARG);
 const ELEMENTS = ['water', 'air', 'fire', 'earth'];
 

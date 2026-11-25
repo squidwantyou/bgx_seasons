@@ -567,6 +567,15 @@ function actionPhase(seed = 'seasons-test'): SeasonsState {
 }
 
 describe('seasons 卡池框架', () => {
+  it('骰子季节：100 张恶意之骰', () => {
+    const state = seasons.setup(2, { pool: 'dice_season' }, createRng('dice-season'));
+    const all = [...state.players.flatMap((player) => player.draftHand), ...state.deck];
+    expect(all).toHaveLength(100);
+    expect(state.deck).toHaveLength(82);
+    for (const card of all) expect(card.i).toBe(15);
+    expect(new Set(all.map((card) => card.u)).size).toBe(100);
+  });
+
   it('五福季节：5 种护符各 20 张，共 100 张', () => {
     const state = seasons.setup(2, { pool: 'five_fortunes' }, createRng('five-fortunes'));
     const all = [...state.players.flatMap((player) => player.draftHand), ...state.deck];
