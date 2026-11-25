@@ -10,7 +10,7 @@ import type { GameCatalog } from '../index.js';
  *
  * 支持 2–4 人局；2 人局可以认输，3–4 人局不能认输（见 §6）。
  * 卡表为 50 张基础牌（seasons-cards.ts），另有预设卡池「五福季节」
- * （空气/火焰/大地/流水/元素护符各 20 张，共 100 张）。
+ * （空气/火焰/大地/流水/元素护符各 20 张）、骰子季节（100 张恶意之骰）。
  * 房间界面只暴露 `pool`；`customDeck` 仅留给脚本/压力测试直接调用引擎。
  */
 export const seasonsCatalog: GameCatalog = {
@@ -35,23 +35,24 @@ export const seasonsCatalog: GameCatalog = {
       label: '卡池',
       type: 'select',
       description:
-        '选标准卡池（50 张 ×2）或五福季节（空气/火焰/大地/流水/元素护符，每种 20 张，共 100 张）。',
+        '选标准卡池（50 张 ×2）、五福季节（5 种护符 × 20 张）或骰子季节（100 张恶意之骰）。',
       default: 'standard',
       choices: [
         { value: 'standard', label: '标准卡池（50 张）' },
         { value: 'five_fortunes', label: '五福季节（5 种 × 20 张）' },
+        { value: 'dice_season', label: '骰子季节（100 张恶意之骰）' },
       ],
     },
   ],
 };
 
 /** 预设卡池：standard = 基础 50 张；five_fortunes = 五种护符各 20 张。 */
-export type SeasonsPool = 'standard' | 'five_fortunes';
+export type SeasonsPool = 'standard' | 'five_fortunes' | 'dice_season';
 
 /** 对局选项：可选 pool 预设卡池与 customDeck（逗号分隔的卡牌 id）。 */
 export const seasonsOptionsSchema = z
   .object({
-    pool: z.enum(['standard', 'five_fortunes']).optional(),
+    pool: z.enum(['standard', 'five_fortunes', 'dice_season']).optional(),
     /**
      * 自定义卡池：逗号分隔的卡牌 id（每种仍按 2 张入池）。
      * 不暴露在房间创建界面（仅供脚本/压力测试直接调用引擎时使用）；

@@ -364,6 +364,10 @@ type PoolEntry = { def: SeasonsCardDef; copies: number };
 export const FIVE_FORTUNES_IDS: readonly number[] = [1, 2, 3, 4, 31];
 export const FIVE_FORTUNES_COPIES = 20;
 
+/** 骰子季节：100 张恶意之骰（id 15）。 */
+export const DICE_SEASON_ID = 15;
+export const DICE_SEASON_COPIES = 100;
+
 function poolEntries(options: SeasonsOptions): PoolEntry[] {
   if (options.customDeck && options.customDeck.trim().length > 0) {
     const ids = [
@@ -398,6 +402,11 @@ function poolEntries(options: SeasonsOptions): PoolEntry[] {
       throw new Error(`五福季节卡池缺少卡牌 id：${missing.join(', ')}`);
     }
     return entries;
+  }
+  if (options.pool === 'dice_season') {
+    const def = cardById(DICE_SEASON_ID);
+    if (!def) throw new Error(`骰子季节卡池缺少卡牌 id：${DICE_SEASON_ID}`);
+    return [{ def, copies: DICE_SEASON_COPIES }];
   }
   return SEASONS_CARDS.map((def) => ({ def, copies: COPIES_PER_CARD }));
 }

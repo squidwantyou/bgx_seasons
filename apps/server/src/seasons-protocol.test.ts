@@ -22,7 +22,7 @@ describe('seasons catalog / options', () => {
     expect(pool.id).toBe('pool');
     expect(pool.type).toBe('select');
     expect(pool.default).toBe('standard');
-    expect(pool.choices.map((c) => c.value)).toEqual(['standard', 'five_fortunes']);
+    expect(pool.choices.map((c) => c.value)).toEqual(['standard', 'five_fortunes', 'dice_season']);
   });
 
   it('默认选项通过校验，且与 catalog 默认值一致', () => {
@@ -42,6 +42,7 @@ describe('seasons catalog / options', () => {
     // 预设卡池
     expect(seasonsOptionsSchema.safeParse({ pool: 'standard' }).success).toBe(true);
     expect(seasonsOptionsSchema.safeParse({ pool: 'five_fortunes' }).success).toBe(true);
+    expect(seasonsOptionsSchema.safeParse({ pool: 'dice_season' }).success).toBe(true);
     expect(seasonsOptionsSchema.safeParse({ pool: 'other' }).success).toBe(false);
   });
 });
