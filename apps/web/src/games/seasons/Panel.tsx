@@ -305,6 +305,61 @@ function PlayerBlock({
 
 
 
+/** F8.2 行动提示：只读现有 view，告诉玩家「现在能做什么」。 */
+function ActionHints({
+  game,
+  player,
+  canAct,
+}: {
+  game: SeasonsGameView;
+  player: SeasonsPlayerView;
+  canAct: boolean;
+}) {
+  if (!canAct || game.pendingChoice) return null;
+
+  const rows: string[] = [];
+  if (game.phase === 'draft') {
+    if (game.myTurn) rows.push(`从轮抽手牌选 1 张（第 ${game.draftRound + 1}/9 轮）`);
+    else rows.push('等待其他玩家选牌');
+  } else if (game.phase === 'organize') {
+    if (game.myTurn) {
+      const yearIndex = player.organizeYear1 === null ? 1 : 2;
+      rows.push(`选 3 张作为第 ${yearIndex} 年牌库`);
+    } else rows.push('等待其他玩家组牌');
+  } else if (game.phase === 'play') {
+    if (game.turnOwner === null) {
+      rows.push(game.myTurn ? '选一颗骰子开始本月行动' : '等待起始玩家选骰');
+    } else if (game.myTurn) {
+      const summonable = (player.hand ?? []).filter(
+        (card) => summonBlockReason(player, card.i, game.playerCount) === null,
+      ).length;
+      const activatable = player.played.filter((card) => {
+        const def = CARD_BY_ID.get(card.i);
+        if (!def || card.used) return false;
+        const effect = def.effect;
+        return effect?.trigger === 'activation' || effect?.triggers?.includes('activation');
+      }).length;
+      if (summonable > 0) rows.push(`可召唤 ${summonable} 张`);
+      if (activatable > 0) rows.push(`可激活 ${activatable} 张`);
+      if (player.canTransmute) rows.push('可晶化 1 次');
+      if (player.badgesUsed < MAX_BADGES) rows.push('可用徽章');
+      rows.push('或结束回合');
+    } else rows.push('等待其他玩家行动');
+  }
+
+  if (rows.length === 0) return null;
+  return (
+    <div className="ss-hints" role="status" aria-live="polite">
+      <span className="ss-hints-label">现在可以</span>
+      {rows.map((row) => (
+        <span key={row} className="ss-hint">
+          {row}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** F4.2 召唤确认条：选中手牌后先预览费用与剩余储备，再确认提交。 */
 function SummonConfirm({
   cardId,
@@ -1041,6 +1096,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
           <p className="ss-muted">观战中</p>
         )}
         {me && <PlayActions game={game} player={me} canAct={canAct} onSend={send} />}
+        {me && <ActionHints game={game} player={me} canAct={canAct} />}
         {me && game.phase === 'play' && <BadgeBar player={me} canAct={canAct} onSend={send} />}
         {me && (
           <MyZone

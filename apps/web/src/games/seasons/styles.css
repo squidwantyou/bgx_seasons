@@ -1348,3 +1348,25 @@
   .ss-result-total { font-size: 18px; }
   .ss-result-breakdown { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* F8.2 行动提示条 */
+.ss-hints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px dashed var(--ss-line, #3a3f46);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 12px;
+}
+.ss-hints-label { color: var(--ss-muted, #9aa3ad); }
+.ss-hint {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(232, 194, 106, 0.12);
+  border: 1px solid rgba(232, 194, 106, 0.35);
+  color: var(--ss-text, #e8eaed);
+  white-space: nowrap;
+}
