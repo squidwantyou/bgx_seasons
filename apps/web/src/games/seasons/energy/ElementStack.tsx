@@ -74,6 +74,26 @@ export function ElementRow({
   );
 }
 
+/** 卡牌费用：只显示非零元素，横向排列；水晶单独用文字角标。 */
+export function ElementCost({
+  counts,
+  crystal = 0,
+  size = 'sm',
+}: {
+  counts: Partial<Record<Element, number>>;
+  crystal?: number;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  return (
+    <span className="ss-element-cost" aria-label="费用">
+      {ELEMENTS.filter((element) => (counts[element] ?? 0) > 0).map((element) => (
+        <ElementPips key={element} element={element} count={counts[element] ?? 0} size={size} />
+      ))}
+      {crystal > 0 && <span className="ss-element-cost-crystal">💎{crystal}</span>}
+    </span>
+  );
+}
+
 /** 元素 + 数量的可点击按钮内容（支付、徽章、护符选择等）。 */
 export function ElementChoice({
   element,

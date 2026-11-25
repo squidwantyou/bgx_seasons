@@ -10,8 +10,8 @@
 | 项目 | 内容 |
 | --- | --- |
 | 当前阶段 | **F1 视觉系统与元素堆叠** |
-| 当前任务 | F1.3 卡牌组件三形态（手牌/牌堆/场上视觉区分） |
-| 最后更新 | 2026-11-25 14:35 |
+| 当前任务 | F2.1 牌桌布局重排（顶栏/骰池/对手/自己固定区） |
+| 最后更新 | 2026-11-25 15:05 |
 | 夜间节奏 | 每天 3 次：23:00 / 01:00 / 04:00（Asia/Shanghai），每次 60–90 分钟 |
 | 验收底线 | `pnpm --filter @bgx/web build` + `pnpm --filter @bgx/web smoke` 全过；涉及 view/引擎字段时加 `pnpm --filter @bgx/server test` |
 | 部署约定 | 前端改动默认只提交不部署；用户明确说“部署”才同步线上 |
@@ -138,7 +138,7 @@
 | --- | --- | --- | --- |
 | F1.1 | 设计令牌 + ElementStack | ✅ | `tokens.css` + `energy/ElementStack.tsx`（Pips/Row/Choice） |
 | F1.2 | 储备/支付/徽章/护符/弹窗改堆叠 | ✅ | 储备区、支付弹窗、徽章 1/2、energy_swap/element_alloc/energy_discard/element_multi/element_pick 均已改堆叠 |
-| F1.3 | 卡牌组件三形态 | ⬜ | CardTile/CardBack/CardMini；手牌/牌堆/场上/弃牌区分 |
+| F1.3 | 卡牌组件三形态 | ✅ | `cards/CardTile.tsx`/`CardMini.tsx`/`CardPile.tsx`；手牌大卡、场上小卡、牌库/牌堆/弃牌背面堆叠；CardBack 合并进 CardPile |
 | F2.1 | 牌桌布局重排 | ⬜ | 顶栏/骰池/对手/自己固定区 |
 | F2.2 | 自己区集中到底部 | ⬜ | 对手区紧凑化 |
 | F2.3 | 多人与行动者高亮 | ⬜ | 3–4 人不串位 |
@@ -198,3 +198,12 @@
   - 验证：`pnpm --filter @bgx/web build` 通过；`pnpm --filter @bgx/web smoke` → `OK 渲染冒烟：1187 次渲染，覆盖 11 种弹窗`。
   - 未做：卡牌费用仍是文字（F1.3 一起改）；牌堆/弃牌仍只有数字（F2）；未部署线上。
   - 下次从 **F1.3** 开始：拆 `cards/CardTile.tsx`、`CardBack.tsx`、`CardMini.tsx`，手牌用大卡、牌堆用背面+数量、场上用横向小卡、弃牌灰化。
+- **2026-11-25 14:40–15:05** 完成 F1.3。
+  - `cards/CardTile.tsx`：手牌/轮抽/组牌/保留选择统一的大卡（卡图 + 费用元素堆叠 + 分数角标 + 名称 + 选中/禁用/悬浮抬升 + 提示条）。
+  - `cards/CardMini.tsx`：场上卡与选择列表的横向小卡（缩略图 + 名称 + 已激活状态 + 卡上能量堆叠）。
+  - `cards/CardPile.tsx`：牌堆/牌库/弃牌的背面三层堆叠 + 数量；`deck` 蓝、`library` 绿、`discard` 暗红，空堆半透明。
+  - `ElementStack` 增加 `ElementCost`（只显示非零元素，水晶用 💎 角标），卡牌费用不再是文字。
+  - 接入 `Panel.tsx`：顶栏牌堆/弃牌改 `CardPile`、玩家区新增牌库 `CardPile`、场上改 `CardMini`、手牌/轮抽/组牌/徽章保留改 `CardTile`；旧 `CardChip` 删除；转化按钮也改为元素堆叠。
+  - 验证：`web build` 通过；`smoke` 1187 次渲染、11 种弹窗全过。
+  - 遗留：`ChoiceModal` 的选牌按钮仍是专用 `ChoiceCardButton`（F2 里统一成大卡）；弃牌堆目前只显示数量（真实弃牌内容要看日志）；未部署。
+  - 下次从 **F2.1** 开始：桌面三段式布局（顶栏状态 / 中部骰池+对手 / 底部自己区），配合 F2.3 行动者高亮。
