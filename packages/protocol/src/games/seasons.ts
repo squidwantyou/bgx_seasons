@@ -10,15 +10,15 @@ import type { GameCatalog } from '../index.js';
  *
  * 支持 2–4 人局；2 人局可以认输，3–4 人局不能认输（见 §6）。
  * 卡表为 50 张基础牌（seasons-cards.ts），另有预设卡池「五福季节」
- * （空气/火焰/大地/流水/元素护符各 20 张，共 100 张）；也支持用
- * customDeck 指定任意卡池，方便组牌玩法与卡池压力测试。
+ * （空气/火焰/大地/流水/元素护符各 20 张，共 100 张）。
+ * 房间界面只暴露 `pool`；`customDeck` 仅留给脚本/压力测试直接调用引擎。
  */
 export const seasonsCatalog: GameCatalog = {
   id: 'seasons',
   name: '四季物语',
   tagline: '轮抽组牌、掷骰取能、召唤魔法牌，三年后水晶最多者胜',
   description:
-    '在线四季物语对局：轮抽 9 张牌分成三年手牌，每年 4 季掷骰选骰，召唤与激活魔法牌，三年结束时结算声望。支持 2–4 人局；可选标准卡池或「五福季节」卡池。',
+    '在线四季物语对局：轮抽 9 张牌分成三年手牌，每年 4 季掷骰选骰，召唤与激活魔法牌，三年结束时结算声望。支持 2–4 人局；开局可选标准卡池或「五福季节」卡池。',
   minPlayers: 2,
   maxPlayers: 4,
   rules: [
@@ -42,15 +42,6 @@ export const seasonsCatalog: GameCatalog = {
         { value: 'five_fortunes', label: '五福季节（5 种 × 20 张）' },
       ],
     },
-    {
-      id: 'customDeck',
-      label: '自定义卡池',
-      type: 'select',
-      description:
-        '可选。留空使用标准 50 张基础卡；填写逗号分隔的卡牌 id 可指定卡池（每种 2 张）。',
-      default: '',
-      choices: [{ value: '', label: '标准卡池（50 张）' }],
-    },
   ],
 };
 
@@ -63,6 +54,7 @@ export const seasonsOptionsSchema = z
     pool: z.enum(['standard', 'five_fortunes']).optional(),
     /**
      * 自定义卡池：逗号分隔的卡牌 id（每种仍按 2 张入池）。
+     * 不暴露在房间创建界面（仅供脚本/压力测试直接调用引擎时使用）；
      * 优先级高于 pool；留空时按 pool 或标准 50 张基础卡。
      */
     customDeck: z

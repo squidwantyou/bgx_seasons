@@ -16,17 +16,13 @@ describe('seasons catalog / options', () => {
     expect(seasonsCatalog.id).toBe('seasons');
     expect(seasonsCatalog.minPlayers).toBe(2);
     expect(seasonsCatalog.maxPlayers).toBe(4);
-    expect(seasonsCatalog.options).toHaveLength(2);
+    // 房间创建界面只暴露「卡池」一个选项；customDeck 仅留给脚本。
+    expect(seasonsCatalog.options).toHaveLength(1);
     const pool = seasonsCatalog.options[0]!;
     expect(pool.id).toBe('pool');
     expect(pool.type).toBe('select');
     expect(pool.default).toBe('standard');
     expect(pool.choices.map((c) => c.value)).toEqual(['standard', 'five_fortunes']);
-    const option = seasonsCatalog.options[1]!;
-    expect(option.id).toBe('customDeck');
-    expect(option.type).toBe('select');
-    expect(option.default).toBe('');
-    expect(option.choices.map((c) => c.value)).toEqual(['']);
   });
 
   it('默认选项通过校验，且与 catalog 默认值一致', () => {
