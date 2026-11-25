@@ -10,7 +10,10 @@ const GAMES = Number(process.argv[2] ?? 200);
 const PLAYERS = Number(process.argv[3] ?? 2);
 // 第 4 个参数（可选）：随机卡池大小。>0 时每局从全部 50 张里随机抽 POOL_SIZE 种，
 // 用 customDeck 入池，验证「任意卡池都能开局并打完」。
-const POOL_SIZE = Number(process.argv[4] ?? 0);
+const POOL_ARG = process.argv[4] ?? '0';
+// 第 4 参数也接受预设卡池名（如 five_fortunes）；否则按随机池大小处理。
+const PRESET_POOL = POOL_ARG === 'five_fortunes' ? POOL_ARG : null;
+const POOL_SIZE = PRESET_POOL ? 0 : Number(POOL_ARG);
 const ELEMENTS = ['water', 'air', 'fire', 'earth'];
 
 function makeRng(seed) {
@@ -28,6 +31,7 @@ function makeRng(seed) {
 }
 
 function optionsFor(seed) {
+  if (PRESET_POOL) return { pool: PRESET_POOL };
   if (!POOL_SIZE) return {};
   const rnd = makeRng((seed ^ 0x9e3779b9) >>> 0);
   const ids = [...CARD_BY_ID.keys()];

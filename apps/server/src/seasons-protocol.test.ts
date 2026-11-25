@@ -16,8 +16,13 @@ describe('seasons catalog / options', () => {
     expect(seasonsCatalog.id).toBe('seasons');
     expect(seasonsCatalog.minPlayers).toBe(2);
     expect(seasonsCatalog.maxPlayers).toBe(4);
-    expect(seasonsCatalog.options).toHaveLength(1);
-    const option = seasonsCatalog.options[0]!;
+    expect(seasonsCatalog.options).toHaveLength(2);
+    const pool = seasonsCatalog.options[0]!;
+    expect(pool.id).toBe('pool');
+    expect(pool.type).toBe('select');
+    expect(pool.default).toBe('standard');
+    expect(pool.choices.map((c) => c.value)).toEqual(['standard', 'five_fortunes']);
+    const option = seasonsCatalog.options[1]!;
     expect(option.id).toBe('customDeck');
     expect(option.type).toBe('select');
     expect(option.default).toBe('');
@@ -26,7 +31,7 @@ describe('seasons catalog / options', () => {
 
   it('默认选项通过校验，且与 catalog 默认值一致', () => {
     expect(seasonsOptionsSchema.parse(seasonsDefaultOptions)).toEqual(seasonsDefaultOptions);
-    expect(seasonsDefaultOptions).toEqual({});
+    expect(seasonsDefaultOptions).toEqual({ pool: 'standard' });
   });
 
   it('接受自定义卡池、拒绝非法 id 串与多余键', () => {
@@ -38,6 +43,10 @@ describe('seasons catalog / options', () => {
     expect(seasonsOptionsSchema.safeParse({ customDeck: '1,2', extra: 1 }).success).toBe(false);
     // 扩展包选项已移除。
     expect(seasonsOptionsSchema.safeParse({ extensions: ['base'] }).success).toBe(false);
+    // 预设卡池
+    expect(seasonsOptionsSchema.safeParse({ pool: 'standard' }).success).toBe(true);
+    expect(seasonsOptionsSchema.safeParse({ pool: 'five_fortunes' }).success).toBe(true);
+    expect(seasonsOptionsSchema.safeParse({ pool: 'other' }).success).toBe(false);
   });
 });
 
