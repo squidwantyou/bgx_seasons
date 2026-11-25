@@ -25,6 +25,8 @@ const ELEMENT_NAME: Record<Element, string> = {
 };
 
 /** 与引擎 rules/const.ts 的 MAX_BADGES 一致 */
+const SEAT_COLORS = ['#e8c26a', '#5fb0e6', '#7fd6a8', '#e08a6a'] as const;
+
 const MAX_BADGES = 3;
 
 const PHASE_NAME: Record<string, string> = {
@@ -141,14 +143,21 @@ function EnergyRow({ player }: { player: SeasonsPlayerView }) {
 function PlayerBlock({
   player,
   label,
+  active = false,
   onPlayedClick,
 }: {
   player: SeasonsPlayerView;
   label: string;
+  active?: boolean;
   onPlayedClick?: (uid: number) => void;
 }) {
+  const seatColor = SEAT_COLORS[player.seat % SEAT_COLORS.length];
   return (
-    <section className={`ss-player${player.isYou ? ' ss-player-you' : ''}`}>
+    <section
+      className={`ss-player${player.isYou ? ' ss-player-you' : ''}${active ? ' ss-player-active' : ''}`}
+      style={{ ['--ss-seat' as string]: seatColor }}
+    >
+      {active && <span className="ss-active-tag">行动中</span>}
       <header className="ss-player-head">
         <span className="ss-seat-tag">{label}</span>
         <strong>{player.isYou ? '你' : '对手'}</strong>
@@ -167,7 +176,12 @@ function PlayerBlock({
       </header>
       <EnergyRow player={player} />
       <div className="ss-piles">
-        <CardPile count={player.libraryCount} label="牌库（第 2、3 年）" kind="library" />
+        <CardPile
+          count={player.libraryCount}
+          label="牌库（第 2、3 年）"
+          kind="library"
+          accent={seatColor}
+        />
       </div>
       <div className="ss-played">
         {player.played.length === 0 ? (
@@ -581,7 +595,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
 
   return (
     <div className="ss-board">
-      <header className="ss-topbar">
+      <header className="ss-band ss-band-top ss-topbar">
         <span className={`ss-phase ss-phase-${game.phase}`}>{PHASE_NAME[game.phase] ?? game.phase}</span>
         <span className="ss-meta">
           第 {game.year} 年 · {game.season?.name ?? '筹备中'} · 第 {game.month + 1} 月
@@ -604,55 +618,69 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
         <p className="ss-queue-hint">之后还有 {game.pendingQueueCount} 个选择将按序处理。</p>
       )}
 
-      <DicePool game={game} canAct={canAct} onSend={send} />
+      <div className="ss-band ss-band-mid">
+        <DicePool game={game} canAct={canAct} onSend={send} />
+        <div className="ss-opponents">
+          {opponents.map((player) => (
+            <PlayerBlock
+              key={player.seat}
+              player={player}
+              label={`座位 ${player.seat + 1}`}
+              active={
+                game.phase === 'draft'
+                  ? player.seat === game.currentPicker
+                  : game.turnOwner === player.seat
+              }
+            />
+          ))}
+        </div>
+      </div>
 
-      {opponents.map((player) => (
-        <PlayerBlock key={player.seat} player={player} label={`座位 ${player.seat + 1}`} />
-      ))}
-
-      {me ? (
-        <PlayerBlock
-          player={me}
-          label={`座位 ${me.seat + 1}`}
-          onPlayedClick={canAct ? (uid) => send({ type: 'activate', cardUid: uid }) : undefined}
-        />
-      ) : (
-        <p className="ss-muted">观战中</p>
-      )}
-      {me && <PlayActions game={game} player={me} canAct={canAct} onSend={send} />}
-      {me && game.phase === 'play' && (
-        <BadgeBar player={me} canAct={canAct} onSend={send} />
-      )}
-      {me && (
-        <MyZone
-          player={me}
-          game={game}
-          canAct={canAct}
-          onSend={send}
-          onFlexSummon={(uid) => {
-            const card = me?.hand?.find((item) => item.u === uid);
-            if (card) setPaying({ uid, cardId: card.i });
-          }}
-        />
-      )}
-      {me && paying && (
-        <PaymentModal
-          key={paying.uid}
-          cardId={paying.cardId}
-          player={me}
-          onCancel={() => setPaying(null)}
-          onConfirm={(paid) => {
-            const uid = paying.uid;
-            setPaying(null);
-            send({ type: 'summon', cardUid: uid, paidElements: paid });
-          }}
-        />
-      )}
-      <ResultBlock game={game} />
+      <div className="ss-band ss-band-bottom">
+        {me ? (
+          <PlayerBlock
+            player={me}
+            label={`座位 ${me.seat + 1}`}
+            active={game.myTurn}
+            onPlayedClick={canAct ? (uid) => send({ type: 'activate', cardUid: uid }) : undefined}
+          />
+        ) : (
+          <p className="ss-muted">观战中</p>
+        )}
+        {me && <PlayActions game={game} player={me} canAct={canAct} onSend={send} />}
+        {me && game.phase === 'play' && <BadgeBar player={me} canAct={canAct} onSend={send} />}
+        {me && (
+          <MyZone
+            player={me}
+            game={game}
+            canAct={canAct}
+            onSend={send}
+            onFlexSummon={(uid) => {
+              const card = me?.hand?.find((item) => item.u === uid);
+              if (card) setPaying({ uid, cardId: card.i });
+            }}
+          />
+        )}
+        {me && paying && (
+          <PaymentModal
+            key={paying.uid}
+            cardId={paying.cardId}
+            player={me}
+            onCancel={() => setPaying(null)}
+            onConfirm={(paid) => {
+              const uid = paying.uid;
+              setPaying(null);
+              send({ type: 'summon', cardUid: uid, paidElements: paid });
+            }}
+          />
+        )}
+        <ResultBlock game={game} />
+      </div>
 
       {me && hasChoice && game.pendingChoice?.choosingSeat === me.seat && (
         <ChoiceModal game={game} mySeat={me.seat} onSend={send} />
       )}
+
       {me && hasBadgeDraw && (
         <BadgeKeepModal
           cards={me.badgeDraw ?? []}
