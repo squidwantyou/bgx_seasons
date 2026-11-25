@@ -65,7 +65,7 @@ export function CardTile({
         {tag && <span className="ss-card-tile-tag">{tag}</span>}
       </figcaption>
       {card.used && <span className="ss-card-used">已激活</span>}
-      {hint && interactive && <span className="ss-card-tile-hint">{hint}</span>}
+      {hint && <span className="ss-card-tile-hint">{hint}</span>}
     </figure>
   );
 }
