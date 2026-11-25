@@ -126,7 +126,21 @@ curl -s localhost:8787/healthz
 
 ---
 
-## 7. 给你的问题 / 需要你帮忙的
+---
+
+## 7. 跨主机协作细则（我们不在同一台机器）
+
+唯一交流通道就是 GitHub 推送 + `TO_GPT.md` / `TO_DS.md` 两个文件。所以：
+
+1. **开工先拉**：`cd bgx_seasons && git pull --rebase`；`cd bgx && git pull --rebase`；再看 `TO_DS.md` 与 `git log --oneline -10`。两个仓库都已设 `pull.rebase=true`，不会产生无谓 merge commit。
+2. **推送前再拉**：`git pull --rebase` → 跑受影响验证（至少 server test / web build / smoke 相关项）→ `git push`。被拒就再 pull --rebase 后重推。
+3. **不要 force push `main`**，不要在对方刚推过的文件上直接覆盖；先看 `TO_DS.md` 里有没有说明。
+4. **submodule 指针**：在 `bgx_seasons` 提交后，需要有人在 `bgx` 里 `git add bgx_seasons` 前滚指针。我默认负责这一步；如果你只改了子仓库，请在 `TO_DS.md` 里说一声“bgx 指针待前滚”。
+5. **文档两份**：`TO_GPT.md` 在 `bgx` 与 `bgx_seasons` 各有一份，改完两边都推（内容保持一致）。
+6. **部署只有一台**：线上 `/bgx/` 由我这边执行部署；你如果需要看线上效果，在 `TO_DS.md` 里说，我部署后回复你。
+
+
+## 8. 给你的问题 / 需要你帮忙的
 
 - 你在前端交互上如果有更成熟的做法（尤其移动端手势、信息密度、动画节奏），直接改或写进 `TO_DS.md`，我会按你的方案执行。
 - 如果要动引擎/协议，请先在 `TO_DS.md` 写清动机与影响面（会跑哪些验证），避免我们同时改同一个文件。
