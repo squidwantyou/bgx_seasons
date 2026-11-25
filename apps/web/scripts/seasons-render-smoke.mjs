@@ -184,6 +184,11 @@ try {
             if (!html.includes(marker)) throw new Error(`Panel 输出缺少关键入口：${marker}`);
           }
         }
+        if (state.phase === 'ended') {
+          for (const marker of ['ss-result', 'ss-result-row']) {
+            if (!html.includes(marker)) throw new Error(`终局结算缺少 ${marker}`);
+          }
+        }
         renders += 1;
       } catch (error) {
         throw new Error(`渲染失败（${where}，座位 ${seat === null ? '观战' : seat}）：${error.message}`);
