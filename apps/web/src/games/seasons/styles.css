@@ -1415,3 +1415,22 @@
 }
 .ss-spectator { display: grid; gap: 8px; }
 .ss-spectator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+
+/* F9.2 观战跟随 */
+.ss-follow-chip {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--ss-line, #3a4250);
+  background: transparent;
+  color: var(--ss-muted, #9aa4b2);
+  cursor: pointer;
+}
+.ss-follow-chip:hover { color: var(--ss-text, #e8eaed); border-color: var(--ss-accent, #e8c26a); }
+.ss-follow-chip.ss-follow-on {
+  border-color: rgba(232, 194, 106, 0.55);
+  background: rgba(232, 194, 106, 0.12);
+  color: var(--ss-accent, #e8c26a);
+}
+.ss-follow-chip:focus-visible { outline: 2px solid var(--ss-accent, #e8c26a); outline-offset: 2px; }
+.ss-spectator .ss-player-active { scroll-margin: 80px; }

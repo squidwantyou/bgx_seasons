@@ -9,9 +9,9 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 当前阶段 | **F1–F7 完成；F8 结算与复盘进行中（F8.1 已完成）** |
-| 当前任务 | F9.2 观战跟随 / F8.3b 待确认 / 等待试玩反馈 |
-| 最后更新 | 2026-11-26 10:00 |
+| 当前阶段 | **F1–F7 完成；F8 除逐步回放外完成；F9 观战视图+跟随完成** |
+| 当前任务 | 等待试玩反馈；F8.3b（逐步回放）待确认；F7.4 音效暂缓 |
+| 最后更新 | 2026-11-26 23:06 |
 | 夜间节奏 | 每天 3 次：23:00 / 01:00 / 04:00（Asia/Shanghai），每次 60–90 分钟 |
 | 验收底线 | `pnpm --filter @bgx/web build` + `pnpm --filter @bgx/web smoke` 全过；涉及 view/引擎字段时加 `pnpm --filter @bgx/server test` |
 | 部署约定 | **用户已授权（2026-11-26）：有改动、验证通过就直接部署**，用 `scripts/deploy-local.sh`（限内存构建 + rsync + 重启 + 健康检查） |
@@ -139,7 +139,7 @@
 ### F9 观战与多人视角（持续）
 
 - **F9.1 观战视图**：观战者看到所有座位的公开面板（非 compact）、顶部「观战」标记，明确「看不到任何人的手牌」。
-- **F9.2 行动跟随**（待做）：观战时自动聚焦当前行动者/选骰者。
+- **F9.2 行动跟随**（✅ 2026-11-26）：观战时自动滚动到当前行动者/选骰者，手动滚动暂停、可恢复。
 
 ---
 
@@ -179,7 +179,7 @@
 | F8.3a | 复盘日志 | ✅ | `LogPanel`：全部/行动/轮抽组牌/季节/计分筛选 + 条数、展开全部（80 条上限、自动滚底）、保留最新条高亮；只读 `game.log` |
 | F8.3b | 逐步回放 | ⬜ | 依赖历史状态快照，可能需要引擎/协议支持；先不擅自加 view 字段 |
 | F9.1 | 观战视图 | ✅ | `mySeat=null` 时顶栏显示「观战」、底部渲染所有座位的完整 PlayerBlock（非 compact）与「看不到任何人的手牌」说明；smoke 增加 `ss-spectator` 断言 |
-| F9.2 | 观战跟随 | ⬜ | 观战时自动聚焦当前行动者/选骰者（滚动与高亮） |
+| F9.2 | 观战跟随 | ✅ | 顶栏「跟随中 · 座位 N」胶囊：行动者/选骰者变化时平滑滚动到该玩家区块（`prefers-reduced-motion` 时瞬移）；手动滚动（wheel/touchmove）自动暂停，点胶囊恢复；smoke 增加 `ss-follow-chip`/`跟随中` 断言 |
 
 ---
 
@@ -361,3 +361,12 @@
 - 修复：交换 `apps/web/src/assets/seasons/dice/w2r4.webp` 与 `w2r6.webp`；`apps/web/scripts/build-seasons-assets.py` 增加 `swap_pairs`，重新跑脚本也会得到同样的交换，避免下次重新生成时回退。
 - 验证：重新生成素材（175 文件 / 1276KB）、冬季对照表复核（d2r4 显示 1+2 水+2 点，d2r6 显示召唤+2 水+3 点）、`pnpm --filter @bgx/web smoke` 1187 次渲染通过。
 - 部署：`scripts/deploy-local.sh` → 入口 `index-CLTXKj7z.js`，健康检查 ok（2026-11-26 12:06）。
+
+### 2026-11-26 23:06 · F9.2 观战跟随
+
+- 观战（`mySeat === null`）时新增「跟随」：取行动者（draft 用 `currentPicker`、play 用 `turnOwner ?? currentPicker`），在其变化时把对应 `PlayerBlock` 平滑滚到视口中央；`prefers-reduced-motion` 时改为瞬移。
+- 顶栏新增胶囊 `ss-follow-chip`：跟随中显示「跟随中 · 座位 N」，手动滚动（wheel/touchmove）后自动暂停并显示「已暂停跟随 · 点此恢复」，点击恢复并立即定位；只在观战时渲染。
+- 实现：`playerRefs`/`playerRefCallbacks`（按座位稳定 ref 回调）+ `followedSeat` 记录已跟随座位，避免同一座位每次渲染重复滚动；`PlayerBlock` 新增可选 `elementRef`。
+- 验证：`web build`（tsc + vite）通过；`smoke` 1187 次渲染通过（新增观战 `ss-follow-chip`/`跟随中` 断言）。
+- 部署：`scripts/deploy-local.sh` → 入口 `index-DTa0llde.js`，健康检查 ok（2026-11-26 23:05）。
+- 下次：F8.3b 需要后端历史快照（待拍板），或按试玩反馈继续打磨；F7.4 音效仍暂缓。
