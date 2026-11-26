@@ -195,6 +195,9 @@ try {
         if (seat === 0 && state.season && state.season.dice.length > 0 && !html.includes('骰面说明')) {
           throw new Error('骰池缺少「骰面说明」入口');
         }
+        if (seat === 0 && state.phase === 'play' && (view.players[0].hand?.length ?? 0) > 1 && !html.includes('手牌排序')) {
+          throw new Error('手牌缺少排序入口');
+        }
         if (seat === 0 && state.phase !== 'ended' && !state.pendingChoice && view.myTurn) {
           if (!html.includes('ss-hints')) throw new Error('行动提示（ss-hints）缺失');
         }
