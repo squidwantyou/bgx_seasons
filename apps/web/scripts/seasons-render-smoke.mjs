@@ -189,6 +189,9 @@ try {
             if (!html.includes(marker)) throw new Error(`观战视图缺少 ${marker}`);
           }
         }
+        if (seat === 0 && state.season && state.season.dice.length > 0 && !html.includes('号骰')) {
+          throw new Error('骰子缺少说明性 title（号骰）');
+        }
         if (seat === 0 && state.phase !== 'ended' && !state.pendingChoice && view.myTurn) {
           if (!html.includes('ss-hints')) throw new Error('行动提示（ss-hints）缺失');
         }
@@ -318,6 +321,15 @@ try {
   }
 
   durs.sort((a, b) => a - b);
+  // 术语浮层里的骰面图例（F10.1）：SSR 直接渲染一次，确认图例与说明都在。
+  const glossaryMod = await server.ssrLoadModule('/src/games/seasons/Glossary.tsx');
+  const Glossary = glossaryMod.Glossary;
+  const glossaryHtml = renderToStaticMarkup(createElement(Glossary, { onClose: () => {} }));
+  renders += 1;
+  for (const marker of ['骰面符号', '召唤等级 +1', '外圈描边', '底部小点']) {
+    if (!glossaryHtml.includes(marker)) throw new Error(`术语浮层缺少 ${marker}`);
+  }
+
   const avg = durs.reduce((sum, value) => sum + value, 0) / Math.max(1, durs.length);
   const p95 = durs[Math.floor(durs.length * 0.95)] ?? 0;
   if (avg > 6) {

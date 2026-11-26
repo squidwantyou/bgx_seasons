@@ -30,6 +30,21 @@ const ELEMENT_NAME: Record<Element, string> = {
   earth: '土',
 };
 
+const SEASON_NAME: Record<string, string> = { w: '冬季', s: '春季', u: '夏季', f: '秋季' };
+
+/** 骰面奖励的一句话说明（用于骰子 title / 无障碍提示）。 */
+function describeRewards(rewards: SeasonsGameView['dice'][number]['rewards']): string {
+  const parts: string[] = [];
+  if (rewards.summon) parts.push('召唤等级+1');
+  if (rewards.transmute) parts.push('可晶化');
+  if (rewards.card) parts.push('抽 1 张');
+  if (rewards.crystals) parts.push(`水晶+${rewards.crystals}`);
+  for (const element of ELEMENTS) {
+    if (rewards[element]) parts.push(`${ELEMENT_NAME[element]}+${rewards[element]}`);
+  }
+  return parts.join('、') || '无奖励';
+}
+
 /** 与引擎 rules/const.ts 的 MAX_BADGES 一致 */
 const SEAT_COLORS = ['#e8c26a', '#5fb0e6', '#7fd6a8', '#e08a6a'] as const;
 
@@ -715,6 +730,7 @@ function DicePool({
               role={pickable && !picked ? 'button' : undefined}
               tabIndex={pickable && !picked ? 0 : undefined}
               aria-label={`骰子 ${die.pip} 点${picked ? `，座位 ${(die.pickedBy as number) + 1} 已选` : '，可选'}`}
+              title={`${SEASON_NAME[die.letter] ?? ''}${die.id} 号骰 · ${die.pip} 点 · ${describeRewards(die.rewards)}`}
               className={[
                 'ss-die',
                 picked ? 'ss-die-picked' : '',
