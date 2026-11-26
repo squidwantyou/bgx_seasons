@@ -82,6 +82,20 @@ def main() -> int:
             total += convert(png, args.out / 'elements' / f'{element}.webp', (ELEMENT_SIZE, ELEMENT_SIZE))
             count += 1
 
+    # 旧素材里冬季 2 号骰的第 4/6 面文件名互换了：w2r4 画的是 r6（召唤+2 水，3 点），
+    # w2r6 画的是 r4（1 水晶+2 水，2 点），与 dice.json 正好相反。转换后交换文件，
+    # 让 <letter><die>r<roll> 的名字与骰面内容一致（否则前端图与奖励文字对不上）。
+    dice_out = args.out / 'dice'
+    swap_pairs = [('w2r4', 'w2r6')]
+    for left, right in swap_pairs:
+        a = dice_out / f'{left}.webp'
+        b = dice_out / f'{right}.webp'
+        if a.is_file() and b.is_file():
+            tmp = dice_out / f'.{left}.swap'
+            a.replace(tmp)
+            b.replace(a)
+            tmp.replace(b)
+
     print(f'转换 {count} 个文件 → {args.out}（{total / 1024:.0f} KB）')
     return 0
 
