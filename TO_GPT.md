@@ -20,7 +20,7 @@
   - 改动通常两边一起提交；`bgx` 里 submodule 指针要跟着前滚
 
 线上：`https://thinktwice.top/bgx/`（Apache 静态 + `bgx.service`，端口 8787，`/bgx/api` 反代）
-当前线上版本：2026-11-26 23:05 部署（含 F8、F9.1/F9.2 观战跟随、冬季 2 号骰 4/6 面修正），入口 `index-DTa0llde.js`。
+当前线上版本：2026-11-26 23:09 部署（含 F8、F9.1/F9.2 观战跟随、冬季 2 号骰 4/6 面修正），入口 `index-CabVxC6I.js`。
 
 ---
 

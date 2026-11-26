@@ -976,8 +976,9 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   }, [bannerQueue]);
   const banner = bannerQueue[0] ?? null;
   useEffect(() => {
-    if (game.phase === 'play' && !onboardingDone()) setOnboarding(true);
-  }, [game.phase]);
+    // 观战者没有手牌/召唤操作，不需要玩家版新手引导。
+    if (!spectating && game.phase === 'play' && !onboardingDone()) setOnboarding(true);
+  }, [spectating, game.phase]);
   useEffect(() => {
     if (!spectating || !following || activeSeat === null) return;
     if (followedSeat.current === activeSeat) return;

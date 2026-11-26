@@ -11,7 +11,7 @@
 | --- | --- |
 | 当前阶段 | **F1–F7 完成；F8 除逐步回放外完成；F9 观战视图+跟随完成** |
 | 当前任务 | 等待试玩反馈；F8.3b（逐步回放）待确认；F7.4 音效暂缓 |
-| 最后更新 | 2026-11-26 23:06 |
+| 最后更新 | 2026-11-26 23:09 |
 | 夜间节奏 | 每天 3 次：23:00 / 01:00 / 04:00（Asia/Shanghai），每次 60–90 分钟 |
 | 验收底线 | `pnpm --filter @bgx/web build` + `pnpm --filter @bgx/web smoke` 全过；涉及 view/引擎字段时加 `pnpm --filter @bgx/server test` |
 | 部署约定 | **用户已授权（2026-11-26）：有改动、验证通过就直接部署**，用 `scripts/deploy-local.sh`（限内存构建 + rsync + 重启 + 健康检查） |
@@ -368,5 +368,6 @@
 - 顶栏新增胶囊 `ss-follow-chip`：跟随中显示「跟随中 · 座位 N」，手动滚动（wheel/touchmove）后自动暂停并显示「已暂停跟随 · 点此恢复」，点击恢复并立即定位；只在观战时渲染。
 - 实现：`playerRefs`/`playerRefCallbacks`（按座位稳定 ref 回调）+ `followedSeat` 记录已跟随座位，避免同一座位每次渲染重复滚动；`PlayerBlock` 新增可选 `elementRef`。
 - 验证：`web build`（tsc + vite）通过；`smoke` 1187 次渲染通过（新增观战 `ss-follow-chip`/`跟随中` 断言）。
-- 部署：`scripts/deploy-local.sh` → 入口 `index-DTa0llde.js`，健康检查 ok（2026-11-26 23:05）。
+- 附带修复：观战者不再弹「玩家版新手引导」（引导只对本人显示）。
+- 部署：`scripts/deploy-local.sh` → 入口 `index-CabVxC6I.js`，健康检查 ok（2026-11-26 23:09）。
 - 下次：F8.3b 需要后端历史快照（待拍板），或按试玩反馈继续打磨；F7.4 音效仍暂缓。
