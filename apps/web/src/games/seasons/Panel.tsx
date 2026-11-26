@@ -207,6 +207,7 @@ function PlayerBlock({
   float,
   onPlayedClick,
   onInspect,
+  elementRef,
 }: {
   player: SeasonsPlayerView;
   label: string;
@@ -216,10 +217,13 @@ function PlayerBlock({
   float?: { crystals?: number; gauge?: number; energy?: number };
   onPlayedClick?: (uid: number) => void;
   onInspect: (cardId: number) => void;
+  /** 观战跟随时用来定位/滚动到该玩家区块。 */
+  elementRef?: (node: HTMLElement | null) => void;
 }) {
   const seatColor = SEAT_COLORS[player.seat % SEAT_COLORS.length];
   return (
     <section
+      ref={elementRef}
       className={`ss-player${player.isYou ? ' ss-player-you' : ''}${active ? ' ss-player-active' : ''}`}
       style={{ ['--ss-seat' as string]: seatColor }}
     >
@@ -915,6 +919,24 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   const [inspecting, setInspecting] = useState<number | null>(null);
   const [glossary, setGlossary] = useState(false);
   const [onboarding, setOnboarding] = useState(false);
+  const spectating = mySeat === null;
+  const activeSeat =
+    game.phase === 'draft' ? game.currentPicker : (game.turnOwner ?? game.currentPicker);
+  const [following, setFollowing] = useState(true);
+  const playerRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const playerRefCallbacks = useRef<Map<number, (node: HTMLElement | null) => void>>(new Map());
+  const followedSeat = useRef<number | null>(null);
+  const refForSeat = (seat: number) => {
+    let callback = playerRefCallbacks.current.get(seat);
+    if (!callback) {
+      callback = (node: HTMLElement | null) => {
+        if (node) playerRefs.current.set(seat, node);
+        else playerRefs.current.delete(seat);
+      };
+      playerRefCallbacks.current.set(seat, callback);
+    }
+    return callback;
+  };
   const prevPlayed = useRef<Map<number, Set<number>>>(new Map());
   const prevStats = useRef<
     Map<number, { crystals: number; gauge: number; energy: number; logCount: number }>
@@ -956,6 +978,30 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
   useEffect(() => {
     if (game.phase === 'play' && !onboardingDone()) setOnboarding(true);
   }, [game.phase]);
+  useEffect(() => {
+    if (!spectating || !following || activeSeat === null) return;
+    if (followedSeat.current === activeSeat) return;
+    const node = playerRefs.current.get(activeSeat);
+    if (!node) return;
+    followedSeat.current = activeSeat;
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    node.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+  }, [spectating, following, activeSeat]);
+
+  useEffect(() => {
+    if (!spectating) return;
+    const pause = () => setFollowing(false);
+    window.addEventListener('wheel', pause, { passive: true });
+    window.addEventListener('touchmove', pause, { passive: true });
+    return () => {
+      window.removeEventListener('wheel', pause);
+      window.removeEventListener('touchmove', pause);
+    };
+  }, [spectating]);
+
   useEffect(() => {
     if (game.myTurn && !prevMyTurn.current) {
       setTurnToast(true);
@@ -1020,6 +1066,25 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
           {PHASE_NAME[game.phase] ?? game.phase}
         </span>
         {!me && <span className="ss-spectator-chip">观战</span>}
+        {spectating && (
+          <button
+            type="button"
+            className={`ss-follow-chip${following ? ' ss-follow-on' : ''}`}
+            onClick={() => {
+              if (following) {
+                setFollowing(false);
+                return;
+              }
+              followedSeat.current = null;
+              setFollowing(true);
+            }}
+            title="观战时会自动滚动到当前行动者；手动滚动会暂停跟随"
+          >
+            {following
+              ? `跟随中${activeSeat !== null ? ` · 座位 ${activeSeat + 1}` : ''}`
+              : '已暂停跟随 · 点此恢复'}
+          </button>
+        )}
         <span className="ss-meta">
           第 {game.year} 年 · {game.season?.name ?? '筹备中'} · 第 {game.month + 1} 月
         </span>
@@ -1111,6 +1176,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
                   highlightUids={fresh.get(player.seat)}
                   float={floats.get(player.seat)}
                   onInspect={setInspecting}
+                  elementRef={refForSeat(player.seat)}
                 />
               ))}
             </div>
