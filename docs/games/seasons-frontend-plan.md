@@ -354,3 +354,10 @@
 - 用户授权「以后有改动了就直接部署上」，据此新增 `scripts/deploy-local.sh`（检查 MemAvailable ≥250MB，protocol 320 / server 384 / web 512 分别限内存构建，rsync 两个目标，重启 bgx，健康检查）。
 - 本次部署：`index-QHlSK5Zk.js`，`/bgx/` 200，`healthz` ok；线上 JS 已包含「观战模式」「展开全部」。
 - 以后流程：改完 → build + smoke → 直接 `scripts/deploy-local.sh` → 在 §7/§12 记录部署时间与入口哈希。
+
+### 2026-11-26 12:06 · 修复季节骰面与奖励不对应（冬季 2 号骰 4/6 面）
+
+- 用户报告「骰面和内容对应有错误」。逐季把 5 颗 × 6 面做成对照表核对后确认：只有**冬季 2 号骰的第 4、6 面**的图片文件名在旧素材里互换了——`w2r4` 画的是 r6（召唤+1、水+2、3 点），`w2r6` 画的是 r4（水晶+1、水+2、2 点）。其余 19 颗骰子 114 面与 `dice.json` 完全一致。
+- 修复：交换 `apps/web/src/assets/seasons/dice/w2r4.webp` 与 `w2r6.webp`；`apps/web/scripts/build-seasons-assets.py` 增加 `swap_pairs`，重新跑脚本也会得到同样的交换，避免下次重新生成时回退。
+- 验证：重新生成素材（175 文件 / 1276KB）、冬季对照表复核（d2r4 显示 1+2 水+2 点，d2r6 显示召唤+2 水+3 点）、`pnpm --filter @bgx/web smoke` 1187 次渲染通过。
+- 部署：`scripts/deploy-local.sh` → 入口 `index-CLTXKj7z.js`，健康检查 ok（2026-11-26 12:06）。
