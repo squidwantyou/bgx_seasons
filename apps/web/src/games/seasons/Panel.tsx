@@ -45,6 +45,26 @@ function describeRewards(rewards: SeasonsGameView['dice'][number]['rewards']): s
   return parts.join('、') || '无奖励';
 }
 
+type HandSort = 'default' | 'cost' | 'type';
+
+/** 手牌排序（F10.2）：按费用（元素总数→水晶）或按类型，稳定保持引擎给的原始顺序。 */
+function sortHand(cards: SeasonsPlayerView['hand'], mode: HandSort) {
+  if (!cards || mode === 'default') return cards ?? [];
+  const energyCost = (id: number) => {
+    const cost = CARD_BY_ID.get(id)?.cost;
+    if (!cost) return 0;
+    return cost.water + cost.air + cost.fire + cost.earth;
+  };
+  const crystalCost = (id: number) => CARD_BY_ID.get(id)?.cost?.crystal ?? 0;
+  const typeKey = (id: number) => CARD_BY_ID.get(id)?.type ?? '';
+  return [...cards].sort((a, b) => {
+    if (mode === 'cost') {
+      return energyCost(a.i) - energyCost(b.i) || crystalCost(a.i) - crystalCost(b.i) || a.u - b.u;
+    }
+    return typeKey(a.i).localeCompare(typeKey(b.i)) || energyCost(a.i) - energyCost(b.i) || a.u - b.u;
+  });
+}
+
 /** 与引擎 rules/const.ts 的 MAX_BADGES 一致 */
 const SEAT_COLORS = ['#e8c26a', '#5fb0e6', '#7fd6a8', '#e08a6a'] as const;
 
@@ -454,6 +474,7 @@ function MyZone({
   onInspect: (cardId: number) => void;
 }) {
   const [picked, setPicked] = useState<number[]>([]);
+  const [handSort, setHandSort] = useState<HandSort>('default');
 
   if (game.phase === 'draft' && player.draftHand) {
     return (
@@ -597,10 +618,34 @@ function MyZone({
 
   return (
     <section className="ss-hand">
-      <h3>手牌 {player.hand ? `· ${player.hand.length} 张` : ''}{canAct ? ' · 点一张牌召唤' : ''}</h3>
+      <div className="ss-hand-head">
+        <h3>手牌 {player.hand ? `· ${player.hand.length} 张` : ''}{canAct ? ' · 点一张牌召唤' : ''}</h3>
+        {player.hand && player.hand.length > 1 && (
+          <div className="ss-hand-sort" role="group" aria-label="手牌排序">
+            <span className="ss-muted">排序</span>
+            {(
+              [
+                ['default', '默认'],
+                ['cost', '费用'],
+                ['type', '类型'],
+              ] as const
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                className={`ss-sort-button${handSort === mode ? ' ss-sort-active' : ''}`}
+                aria-pressed={handSort === mode}
+                onClick={() => setHandSort(mode)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="ss-hand-cards">
         {player.hand && player.hand.length > 0 ? (
-          player.hand.map((card) => {
+          sortHand(player.hand, handSort).map((card) => {
             const reason = summonBlockReason(player, card.i, game.players.length);
             const blocked = canAct && reason !== null;
             return (

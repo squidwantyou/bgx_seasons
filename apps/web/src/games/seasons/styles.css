@@ -1455,3 +1455,18 @@
   cursor: pointer;
 }
 .ss-link-button:focus-visible { outline: 2px solid var(--ss-accent, #e8c26a); outline-offset: 2px; }
+
+/* F10.2 手牌排序 */
+.ss-hand-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ss-hand-sort { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; }
+.ss-sort-button {
+  padding: 2px 8px;
+  border: 1px solid var(--ss-line, #3a4250);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ss-muted, #9aa4b2);
+  font-size: 11px;
+  cursor: pointer;
+}
+.ss-sort-button.ss-sort-active { border-color: var(--ss-accent, #e8c26a); color: var(--ss-accent, #e8c26a); }
+.ss-sort-button:focus-visible { outline: 2px solid var(--ss-accent, #e8c26a); outline-offset: 2px; }
