@@ -11,7 +11,7 @@
 | --- | --- |
 | 当前阶段 | **F1–F9 完成；F10 新手可读性（骰面图例）已开始** |
 | 当前任务 | 等待试玩反馈；F8.3b（逐步回放）待确认；F7.4 音效暂缓 |
-| 最后更新 | 2026-11-27 01:04 |
+| 最后更新 | 2026-11-27 01:06 |
 | 夜间节奏 | 每天 3 次：23:00 / 01:00 / 04:00（Asia/Shanghai），每次 60–90 分钟 |
 | 验收底线 | `pnpm --filter @bgx/web build` + `pnpm --filter @bgx/web smoke` 全过；涉及 view/引擎字段时加 `pnpm --filter @bgx/server test` |
 | 部署约定 | **用户已授权（2026-11-26）：有改动、验证通过就直接部署**，用 `scripts/deploy-local.sh`（限内存构建 + rsync + 重启 + 健康检查） |
@@ -379,5 +379,6 @@
 - 骰池里每颗骰新增 `title`：`冬季 1 号骰 · 3 点 · 水晶+6`（`describeRewards()` 统一拼装），鼠标悬停即可看奖励，不必读下方小字；仍然保留下方奖励行与 aria-label。
 - 实现：`Glossary.tsx` 增加 `DICE_SYMBOLS`（复用 `dieArt`）；`Panel.tsx` 增加 `SEASON_NAME`/`describeRewards`；`styles.css` 增加 `.ss-dice-legend*`。
 - 验证：`web build`（tsc）通过；`smoke` 1188 次渲染通过（新增骰子 title「号骰」断言 + 直接 SSR 渲染 Glossary 校验图例文案）。
-- 部署：`scripts/deploy-local.sh` → 入口 `index-C4WZeN5T.js`，健康检查 ok（2026-11-27 01:04）。
+- 骰池标题旁新增「骰面说明」入口（`.ss-link-button`），点击直接打开带图例的术语浮层，免得玩家不知道顶栏「术语」里有骰面图。
+- 部署：`scripts/deploy-local.sh` → 入口 `index-wMvG4gc1.js`，健康检查 ok（2026-11-27 01:06）。
 - 下次：F8.3b 仍需后端快照方案；其余按试玩反馈。
