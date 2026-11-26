@@ -192,6 +192,9 @@ try {
         if (seat === 0 && state.season && state.season.dice.length > 0 && !html.includes('号骰')) {
           throw new Error('骰子缺少说明性 title（号骰）');
         }
+        if (seat === 0 && state.season && state.season.dice.length > 0 && !html.includes('骰面说明')) {
+          throw new Error('骰池缺少「骰面说明」入口');
+        }
         if (seat === 0 && state.phase !== 'ended' && !state.pendingChoice && view.myTurn) {
           if (!html.includes('ss-hints')) throw new Error('行动提示（ss-hints）缺失');
         }

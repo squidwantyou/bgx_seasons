@@ -1442,3 +1442,16 @@
 .ss-dice-legend li { display: flex; gap: 10px; align-items: center; font-size: 12px; }
 .ss-dice-legend img { border-radius: 8px; flex: none; }
 .ss-dice-legend-dots { width: 48px; text-align: center; letter-spacing: 2px; color: var(--ss-muted, #9aa4b2); flex: none; }
+
+/* F10.1 骰池旁的「骰面说明」入口 */
+.ss-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ss-accent, #e8c26a);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.ss-link-button:focus-visible { outline: 2px solid var(--ss-accent, #e8c26a); outline-offset: 2px; }

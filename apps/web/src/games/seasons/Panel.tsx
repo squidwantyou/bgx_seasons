@@ -698,10 +698,12 @@ function DicePool({
   game,
   canAct,
   onSend,
+  onHelp,
 }: {
   game: SeasonsGameView;
   canAct: boolean;
   onSend: (action: SeasonsAction) => void;
+  onHelp?: () => void;
 }) {
   if (game.dice.length === 0) return null;
   const pickable = canAct && game.phase === 'play' && game.turnOwner === null;
@@ -710,6 +712,11 @@ function DicePool({
     <section className="ss-dice-band" aria-label="本月骰子">
       <div className="ss-dice-head">
         <span className="ss-dice-title">本月骰池</span>
+        {onHelp && (
+          <button type="button" className="ss-link-button" onClick={onHelp}>
+            骰面说明
+          </button>
+        )}
         <span className="ss-muted">
           {pickable
             ? remaining > 0
@@ -1144,7 +1151,7 @@ export function SeasonsPanel({ view, mySeat, disabled, onAction }: GamePanelProp
       )}
 
       <div className="ss-band ss-band-mid">
-        <DicePool game={game} canAct={canAct} onSend={send} />
+        <DicePool game={game} canAct={canAct} onSend={send} onHelp={() => setGlossary(true)} />
         <div className="ss-opponents">
           {opponents.map((player) => (
             <PlayerBlock
