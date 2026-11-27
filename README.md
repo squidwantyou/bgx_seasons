@@ -1,5 +1,12 @@
 # BGX · 在线多人桌游
 
+> `bgx_seasons` 的 `Angel-develop` 分支保存 2026-11-27 用户验收的完整 BGX
+> 工作区，不是主分支的插件摘录。安装：`pnpm install --frozen-lockfile`；
+> 构建：`pnpm run build`；本地启动：`node scripts/start-seasons-local.mjs`。
+> 规则表与规则书在 `docs/reference/`，验收说明见
+> `docs/seasons-rework-2026-11-27.md`，后续交接见远端主分支的 `TO_DS.md`。
+> 当前不继续开发、不自动合并、不部署，等待用户具体指令。
+
 前后端分离的在线桌游站点。目前内置**黑白棋（Reversi）**、**炸飞机（Plane Bomb）**和**四季物语（Seasons，2–4 人）**，房间、玩家、对局状态、实时同步、聊天、账号、观战、断线恢复都是通用的。
 
 游戏是**可插拔模块**：服务端引擎、共享协议、前端界面各自按目录自动发现，新增棋种不改框架代码。

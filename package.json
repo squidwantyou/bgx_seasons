@@ -8,5 +8,9 @@
     "test": "pnpm --filter @bgx/server run test",
     "deploy": "bash scripts/deploy.sh",
     "smoke": "node apps/web/scripts/e2e-smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1",
+    "sharp": "0.35.5"
   }
 }
