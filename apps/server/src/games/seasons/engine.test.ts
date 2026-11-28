@@ -2209,6 +2209,44 @@ describe('seasons turn flow', () => {
     expect(earth.players[0]?.crystals).toBe(3);
   });
 
+  it('批量晶化：一次结算多种元素并加总水晶', () => {
+    const base = summonReady();
+    const state: SeasonsState = {
+      ...base,
+      seasonIdx: 0,
+      turnOwner: 0,
+      players: base.players.map((player, seat) =>
+        seat === 0 ? { ...player, canTransmute: true, crystals: 0, energies: { ...player.energies, water: 3, air: 4 } } : player,
+      ),
+    };
+    const next = apply(state, 0, { type: 'transmute-batch', elements: [
+      { element: 'water', count: 2 }, { element: 'air', count: 1 },
+    ] });
+    // 冬季：水 1 / 风 1
+    expect(next.players[0]?.crystals).toBe(3);
+    expect(next.players[0]?.energies.water).toBe(1);
+    expect(next.players[0]?.energies.air).toBe(3);
+    expect(next.players[0]?.transmutedThisTurn).toBe(true);
+    expect(next.log.at(-1)?.msg).toContain('晶化 2水、1风');
+  });
+
+  it('批量晶化：能量不足时整体拒绝、不扣费', () => {
+    const base = summonReady();
+    const state: SeasonsState = {
+      ...base,
+      seasonIdx: 0,
+      turnOwner: 0,
+      players: base.players.map((player, seat) =>
+        seat === 0 ? { ...player, canTransmute: true, crystals: 0, energies: { ...player.energies, water: 1 } } : player,
+      ),
+    };
+    const res = seasons.reduce(state, 0, { type: 'transmute-batch', elements: [
+      { element: 'water', count: 2 }, { element: 'air', count: 1 },
+    ] }, ctx);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe('energy_low');
+  });
+
   it('没有转换能力时拒绝；没有对应能量时拒绝', () => {
     const base = summonReady();
     const noAbility: SeasonsState = {
@@ -3718,7 +3756,7 @@ describe('seasons elemental amulet', () => {
     };
   }
 
-  it('付水：选择的 2 个能量储存到护符牌面', () => {
+  it('付水：选择的 2 个能量进入元素槽（不存卡面）', () => {
     const base = amuletState('water');
     const res = seasons.reduce(
       base,
@@ -3738,14 +3776,11 @@ describe('seasons elemental amulet', () => {
     );
     expect(done.ok).toBe(true);
     if (!done.ok) return;
-    expect(done.state.players[0]?.energies.air).toBe(2);
     expect(
       done.state.players[0]?.played.find((card) => card.u === 9901)?.stored?.air,
-    ).toBe(2);
+    ).toBeUndefined();
     expect(done.state.players[0]?.energies.water).toBe(1); // 付水 1
-
-    const view = seasons.view(done.state, 0, true);
-    expect(view.players[0]?.played.find((card) => card.u === 9901)?.stored?.air).toBe(2);
+    expect(done.state.players[0]?.energies.air).toBe(4); // 原有 2 + 获得 2
   });
 
   it('付风：召唤等级 +1（不弃手牌、不弹窗）', () => {
@@ -3811,7 +3846,8 @@ describe('seasons elemental amulet both', () => {
     expect(done.state.pendingChoice).toBeNull();
     expect(
       done.state.players[0]?.played.find((card) => card.u === 9911)?.stored?.earth,
-    ).toBe(2);
+    ).toBeUndefined();
+    expect(done.state.players[0]?.energies.earth).toBe(4);
   });
 });
 
